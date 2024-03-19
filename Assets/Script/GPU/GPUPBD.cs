@@ -295,7 +295,7 @@ public class GPUPBD : MonoBehaviour
         for(int i=0;i<number;i++){
             int PosOffset = i * LoadTetModel.positions.Count;
             for(int j=0;j<LoadTetModel.positions.Count;j++){
-                Positions[j+PosOffset] = _Positions[j] + new Vector3(-5.0f, 0.0f, 0.0f) * i;
+                Positions[j+PosOffset] = _Positions[j] + new Vector3(-10.0f, 0.0f, 0.0f) * i;
             }
             int TriOffset = i * LoadTetModel.triangles.Count;
             for(int j=0;j<LoadTetModel.triangles.Count;j++){
@@ -366,8 +366,6 @@ public class GPUPBD : MonoBehaviour
             vDataArray[i].pos = Positions[i];
             vDataArray[i].norms = Vector3.zero;
             vDataArray[i].uvs = Vector3.zero;
-            
-            Debug.Log(i + " : vDataArray[i].pos : " + vDataArray[i].pos);
         }
 
         int triBuffStride = sizeof(int);
@@ -387,7 +385,6 @@ public class GPUPBD : MonoBehaviour
     }
     private void setBuffData()
     {
-
         vertsBuff.SetData(vDataArray);
         triBuffer.SetData(triArray);
 
@@ -433,18 +430,53 @@ public class GPUPBD : MonoBehaviour
 
         List<MTriangle> initTriangle = new List<MTriangle>();  //list of triangle cooresponding to node 
         List<int> initTrianglePtr = new List<int>(); //contain a group of affectd triangle to node
+        //initTrianglePtr.Add(0);
+
+        // for (int i = 0; i < nodeCount; i++)
+        // {
+        //     foreach (Triangle tri in triangles)
+        //     {
+        //         if (tri.vertices[0] == i || tri.vertices[1] == i || tri.vertices[2] == i)
+        //         {
+        //             MTriangle tmpTri = new MTriangle();
+        //             tmpTri.v0 = tri.vertices[0];
+        //             tmpTri.v1 = tri.vertices[1];
+        //             tmpTri.v2 = tri.vertices[2];
+        //             initTriangle.Add(tmpTri);
+        //         }
+        //     }
+        //     initTrianglePtr.Add(initTriangle.Count);
+        // }
+
+        // 노드 번호를 키로, 해당 노드를 포함하는 삼각형의 인덱스 리스트를 값으로 가지는 사전 생성
+        Dictionary<int, List<int>> nodeTriangles = new Dictionary<int, List<int>>();
+
+        // 모든 삼각형에 대해 사전을 채움
+        for (int triIndex = 0; triIndex < triangles.Count; triIndex++)
+        {
+            Triangle tri = triangles[triIndex];
+            for (int vertexIndex = 0; vertexIndex < 3; vertexIndex++) // 각 삼각형의 3개 정점
+            {
+                int vertex = tri.vertices[vertexIndex];
+                if (!nodeTriangles.ContainsKey(vertex))
+                {
+                    nodeTriangles[vertex] = new List<int>();
+                }
+                nodeTriangles[vertex].Add(triIndex);
+            }
+        }
+
+        // 사전을 사용하여 initTriangle 및 initTrianglePtr 초기화
         initTrianglePtr.Add(0);
 
         for (int i = 0; i < nodeCount; i++)
         {
-            foreach (Triangle tri in triangles)
+            if (nodeTriangles.TryGetValue(i, out List<int> triangleIndexes))
             {
-                if (tri.vertices[0] == i || tri.vertices[1] == i || tri.vertices[2] == i)
+                foreach (int triIndex in triangleIndexes)
                 {
-                    MTriangle tmpTri = new MTriangle();
-                    tmpTri.v0 = tri.vertices[0];
-                    tmpTri.v1 = tri.vertices[1];
-                    tmpTri.v2 = tri.vertices[2];
+                    Triangle tri = triangles[triIndex];
+                    MTriangle tmpTri = new MTriangle { v0 = tri.vertices[0], v1 = tri.vertices[1], v2 = tri.vertices[2] };
                     initTriangle.Add(tmpTri);
                 }
             }
@@ -473,9 +505,6 @@ public class GPUPBD : MonoBehaviour
         initUint.Initialize();
         objVolumeBuffer = new ComputeBuffer(1, sizeof(uint));
         objVolumeBuffer.SetData(initUint);
-
-
-
     }
 
 
@@ -598,14 +627,28 @@ public class GPUPBD : MonoBehaviour
         material = new Material(renderingShader); // new material for difference object
         material.color = matColor; //set color to material
         computeShaderobj = Instantiate(computeShader); // to instantiate the compute shader to be use with multiple object
-
+        double lastInterval = Time.realtimeSinceStartup;
         SelectModelName();
+        Debug.Log("SelectModelName: " + (Time.realtimeSinceStartup-lastInterval));
+        lastInterval = Time.realtimeSinceStartup;
         setupMeshData(numberOfObjects);
+        Debug.Log("setupMeshData: " + (Time.realtimeSinceStartup-lastInterval));
+        lastInterval = Time.realtimeSinceStartup;
         setupShader();
+        Debug.Log("setupShader: " + (Time.realtimeSinceStartup-lastInterval));
+        lastInterval = Time.realtimeSinceStartup;
         setBuffData();
+        Debug.Log("setBuffData: " + (Time.realtimeSinceStartup-lastInterval));
+        lastInterval = Time.realtimeSinceStartup;
         setupComputeBuffer();
+        Debug.Log("setupComputeBuffer: " + (Time.realtimeSinceStartup-lastInterval));
+        lastInterval = Time.realtimeSinceStartup;
         setupKernel();
+        Debug.Log("setupKernel: " + (Time.realtimeSinceStartup-lastInterval));
+        lastInterval = Time.realtimeSinceStartup;
         setupComputeShader();
+        Debug.Log("setupComputeShader: " + (Time.realtimeSinceStartup-lastInterval));
+        lastInterval = Time.realtimeSinceStartup;
 
         totalVolume = computeObjectVolume();
     }
