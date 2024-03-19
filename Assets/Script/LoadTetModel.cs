@@ -69,14 +69,14 @@ public class LoadTetModel : MonoBehaviour
     private static void loadNodesPosition()
     {
         string Nodepath = fileName + ".node";
-        StreamReader reader1 = new StreamReader(Nodepath);
         string line;
+        StreamReader reader1 = new StreamReader(Nodepath);
 
         Matrix4x4 sMatrix = Matrix4x4.Scale(obj.transform.localScale);
         Matrix4x4 tMatrix = Matrix4x4.Translate(obj.transform.position);
         Quaternion rotation = Quaternion.Euler(obj.transform.eulerAngles.x,
-           obj.transform.eulerAngles.y, obj.transform.eulerAngles.z);
-        //Quaternion rotation = Quaternion.identity;
+                                               obj.transform.eulerAngles.y, 
+                                               obj.transform.eulerAngles.z);        
         Matrix4x4 rMatrix = Matrix4x4.Rotate(rotation);
 
         using (reader1)

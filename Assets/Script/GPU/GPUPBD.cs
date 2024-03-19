@@ -24,6 +24,7 @@ public class GPUPBD : MonoBehaviour
     private string modelName;
 
     [Header("Obj Parameters")]
+    public int numberOfObjects = 1;
     public float invMass = 1.0f;
     public float dt = 0.01f; // have to devide by 20
     public Vector3 gravity = new Vector3(0f, -9.81f, 0f);
@@ -271,19 +272,72 @@ public class GPUPBD : MonoBehaviour
         }
     }
 
-    void setupMeshData()
+    void setupMeshData(int number)
     {
         //print(Application.dataPath);
         string filePath = Application.dataPath + "/TetGen-Model/";
         LoadTetModel.LoadData(filePath + modelName, gameObject);
 
-        Positions = LoadTetModel.positions.ToArray();
-        triangles = LoadTetModel.triangles;
-        distanceConstraints = LoadTetModel.springs;
-        triArray = LoadTetModel.triangleArr.ToArray();
+        var _Positions = LoadTetModel.positions.ToArray();            
+        var _triangles = LoadTetModel.triangles;
+        var _distanceConstraints = LoadTetModel.springs;
+        var _triArray = LoadTetModel.triangleArr.ToArray();
+        var _tetrahedrons = LoadTetModel.tetrahedrons;
+        var _bendingConstraints = LoadTetModel.bendings;
 
-        tetrahedrons = LoadTetModel.tetrahedrons;
-        bendingConstraints = LoadTetModel.bendings;
+        Positions = new Vector3[number * LoadTetModel.positions.Count];
+        triangles = new List<Triangle>(new Triangle[number * LoadTetModel.triangles.Count]);
+        distanceConstraints = new List<Spring>(new Spring[number * LoadTetModel.springs.Count]);
+        triArray = new int[number * LoadTetModel.triangleArr.Count];
+        tetrahedrons = new List<Tetrahedron>(new Tetrahedron[number * LoadTetModel.tetrahedrons.Count]);
+        bendingConstraints = new List<Bending>(new Bending[number * LoadTetModel.bendings.Count]);
+
+        for(int i=0;i<number;i++){
+            int PosOffset = i * LoadTetModel.positions.Count;
+            for(int j=0;j<LoadTetModel.positions.Count;j++){
+                Positions[j+PosOffset] = _Positions[j] + new Vector3(-5.0f, 0.0f, 0.0f) * i;
+            }
+            int TriOffset = i * LoadTetModel.triangles.Count;
+            for(int j=0;j<LoadTetModel.triangles.Count;j++){
+                var t = _triangles[j];
+                triangles[j+TriOffset] = new Triangle(t.vertices[0] + PosOffset, t.vertices[1] + PosOffset, t.vertices[2] + PosOffset);
+            }
+            int TriArrOffset = i * LoadTetModel.triangleArr.Count;
+            for(int j=0;j<LoadTetModel.triangleArr.Count;j++){
+                triArray[j+TriArrOffset] = _triArray[j] + PosOffset;
+            }
+            int TetraOffset = i * LoadTetModel.tetrahedrons.Count;
+            for(int j=0;j<LoadTetModel.tetrahedrons.Count;j++){    
+                Tetrahedron oldTetra = _tetrahedrons[j];
+                Tetrahedron newTetra = new Tetrahedron(
+                    oldTetra.i1 + PosOffset, 
+                    oldTetra.i2 + PosOffset, 
+                    oldTetra.i3 + PosOffset, 
+                    oldTetra.i4 + PosOffset, 
+                    oldTetra.RestVolume);                            
+                tetrahedrons[j+TetraOffset] = newTetra;
+            }
+            int DistConstraintOffset = i * LoadTetModel.springs.Count;
+            for(int j=0;j<LoadTetModel.springs.Count;j++){
+                Spring oldSpring = _distanceConstraints[j];
+                Spring newSpring = new Spring(
+                    oldSpring.i1 + PosOffset, 
+                    oldSpring.i2 + PosOffset, 
+                    oldSpring.RestLength);
+                distanceConstraints[j+DistConstraintOffset] = newSpring;                                
+            }
+            int bendingOffset = i * LoadTetModel.bendings.Count;
+            for(int j=0;j<LoadTetModel.bendings.Count;j++){
+                Bending oldBending = _bendingConstraints[j];
+                Bending newBending = new Bending();                    
+                newBending.index0 = oldBending.index0 + PosOffset;
+                newBending.index1 = oldBending.index1 + PosOffset;
+                newBending.index2 = oldBending.index2 + PosOffset;
+                newBending.index3 = oldBending.index3 + PosOffset;
+                newBending.restAngle = oldBending.restAngle;
+                bendingConstraints[j+bendingOffset] = newBending;
+            }
+        }        
 
         nodeCount = Positions.Length;
         springCount = distanceConstraints.Count;
@@ -312,6 +366,8 @@ public class GPUPBD : MonoBehaviour
             vDataArray[i].pos = Positions[i];
             vDataArray[i].norms = Vector3.zero;
             vDataArray[i].uvs = Vector3.zero;
+            
+            Debug.Log(i + " : vDataArray[i].pos : " + vDataArray[i].pos);
         }
 
         int triBuffStride = sizeof(int);
@@ -544,7 +600,7 @@ public class GPUPBD : MonoBehaviour
         computeShaderobj = Instantiate(computeShader); // to instantiate the compute shader to be use with multiple object
 
         SelectModelName();
-        setupMeshData();
+        setupMeshData(numberOfObjects);
         setupShader();
         setBuffData();
         setupComputeBuffer();
