@@ -292,10 +292,13 @@ public class GPUPBD : MonoBehaviour
         tetrahedrons = new List<Tetrahedron>(new Tetrahedron[number * LoadTetModel.tetrahedrons.Count]);
         bendingConstraints = new List<Bending>(new Bending[number * LoadTetModel.bendings.Count]);
 
+        float ranges = 20.0f;
+
         for(int i=0;i<number;i++){
             int PosOffset = i * LoadTetModel.positions.Count;
-            for(int j=0;j<LoadTetModel.positions.Count;j++){
-                Positions[j+PosOffset] = _Positions[j] + new Vector3(-10.0f, 0.0f, 0.0f) * i;
+            Vector3 Offset = new Vector3(UnityEngine.Random.Range(-ranges, ranges), UnityEngine.Random.Range(3.0f, 3.0f + ranges), UnityEngine.Random.Range(-ranges, ranges));
+            for(int j=0;j<LoadTetModel.positions.Count;j++){                
+                Positions[j+PosOffset] = _Positions[j] + Offset;
             }
             int TriOffset = i * LoadTetModel.triangles.Count;
             for(int j=0;j<LoadTetModel.triangles.Count;j++){
