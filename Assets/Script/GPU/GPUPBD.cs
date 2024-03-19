@@ -418,7 +418,6 @@ public class GPUPBD : MonoBehaviour
         int[] deltaCounterArray = new int[nodeCount];
         deltaCounterArray.Initialize();
 
-
         deltaPositionsBuffer = new ComputeBuffer(nodeCount, sizeof(float) * 3);
         deltaPositionsBuffer.SetData(deltaPositionArray);
 
@@ -427,9 +426,6 @@ public class GPUPBD : MonoBehaviour
 
         deltaCounterBuffer = new ComputeBuffer(nodeCount, sizeof(int));
         deltaCounterBuffer.SetData(deltaCounterArray);
-
-
-
 
         List<MTriangle> initTriangle = new List<MTriangle>();  //list of triangle cooresponding to node 
         List<int> initTrianglePtr = new List<int>(); //contain a group of affectd triangle to node
@@ -451,14 +447,11 @@ public class GPUPBD : MonoBehaviour
         //     initTrianglePtr.Add(initTriangle.Count);
         // }
 
-        // 노드 번호를 키로, 해당 노드를 포함하는 삼각형의 인덱스 리스트를 값으로 가지는 사전 생성
         Dictionary<int, List<int>> nodeTriangles = new Dictionary<int, List<int>>();
-
-        // 모든 삼각형에 대해 사전을 채움
         for (int triIndex = 0; triIndex < triangles.Count; triIndex++)
         {
             Triangle tri = triangles[triIndex];
-            for (int vertexIndex = 0; vertexIndex < 3; vertexIndex++) // 각 삼각형의 3개 정점
+            for (int vertexIndex = 0; vertexIndex < 3; vertexIndex++)
             {
                 int vertex = tri.vertices[vertexIndex];
                 if (!nodeTriangles.ContainsKey(vertex))
@@ -468,10 +461,7 @@ public class GPUPBD : MonoBehaviour
                 nodeTriangles[vertex].Add(triIndex);
             }
         }
-
-        // 사전을 사용하여 initTriangle 및 initTrianglePtr 초기화
         initTrianglePtr.Add(0);
-
         for (int i = 0; i < nodeCount; i++)
         {
             if (nodeTriangles.TryGetValue(i, out List<int> triangleIndexes))
