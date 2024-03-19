@@ -296,7 +296,7 @@ public class GPUPBD : MonoBehaviour
 
         for(int i=0;i<number;i++){
             int PosOffset = i * LoadTetModel.positions.Count;
-            Vector3 Offset = new Vector3(UnityEngine.Random.Range(-ranges, ranges), UnityEngine.Random.Range(3.0f, 3.0f + ranges), UnityEngine.Random.Range(-ranges, ranges));
+            Vector3 Offset = new Vector3(UnityEngine.Random.Range(-ranges, ranges), UnityEngine.Random.Range(10.0f, 50.0f), UnityEngine.Random.Range(-ranges, ranges));
             for(int j=0;j<LoadTetModel.positions.Count;j++){                
                 Positions[j+PosOffset] = _Positions[j] + Offset;
             }
