@@ -42,7 +42,11 @@ public class GPUPBD : MonoBehaviour
     [Header("Collision")]
     public GameObject floor;
 
+    [Header("Triangle Intersections")]
+    public bool calculateCollision = false;
+
     [Header("Label Data")]
+    public bool drawFPS;
     public bool renderVolumeText;
     public string Text;
     public int xOffset;
@@ -50,7 +54,7 @@ public class GPUPBD : MonoBehaviour
     public int fontSize;
     public Color textColor = Color.white;
     private Rect rectPos;
-    private Color color;
+    private Color color = Color.black;
 
     [Header("Volume Data")]
     public bool writeVolumeToFile;
@@ -72,8 +76,9 @@ public class GPUPBD : MonoBehaviour
     Vector3[] ProjectPositions;
     Vector3[] WorldPositions;
     Vector3[] Velocities;
-    Vector3[] Forces;
+    Vector3[] Responses;
     Vector3[] Normals;
+    Vector3[] CollisionDirections;
     List<Spring> distanceConstraints = new List<Spring>();
     List<Triangle> triangles = new List<Triangle>();
     List<Tetrahedron> tetrahedrons = new List<Tetrahedron>();
@@ -91,8 +96,10 @@ public class GPUPBD : MonoBehaviour
     private ComputeBuffer triangleIndicesBuffer;
 
     private ComputeBuffer deltaPositionsBuffer;
-    private ComputeBuffer deltaPositionsUIntBuffer;
+    private ComputeBuffer deltaPositionsIntBuffer;
     private ComputeBuffer deltaCounterBuffer;
+    private ComputeBuffer directionIntBuffer;
+    private ComputeBuffer directionCounterBuffer;
 
     private ComputeBuffer objVolumeBuffer;
 
@@ -101,7 +108,7 @@ public class GPUPBD : MonoBehaviour
     private ComputeBuffer tetVolConstraintsBuffer;
 
     //kerne id (might not use all currently)
-    //private int applyExternalForcesKernel;
+    //private int applyExternalResponsesKernel;
     //private int dampVelocitiesKernel;
     private int applyExplicitEulerKernel;
     private int floorCollisionKernel;
@@ -118,15 +125,18 @@ public class GPUPBD : MonoBehaviour
 
     private int computeVerticesNormal; // for rendering purpose 
 
+    private int computeCollisionHandling; // for collision detection
+    private int computeCollisionResponse; // for collision response
+
     [Header("Rendering Paramenter")]
     public ComputeShader computeShader;
+    public ComputeShader collisionComputeShader;
     public Shader renderingShader;
     public Color matColor;
 
     [HideInInspector]
     private Material material;
     private ComputeShader computeShaderobj;
-
     struct vertData
     {
         public Vector3 pos;
@@ -140,9 +150,12 @@ public class GPUPBD : MonoBehaviour
     float totalVolume; //
     int frame = 0; //number ot time frame
     float[] volumeDataGPU = new float[1]; //use to get data from GPU
+    Int3Struct[] directionDataGPU = new Int3Struct[1]; //use to get data from GPU
 
     [HideInInspector]
     List<string[]> tableData = new List<string[]>();
+
+    bool flag = false;
 
     void SelectModelName()
     {
@@ -292,11 +305,11 @@ public class GPUPBD : MonoBehaviour
         tetrahedrons = new List<Tetrahedron>(new Tetrahedron[number * LoadTetModel.tetrahedrons.Count]);
         bendingConstraints = new List<Bending>(new Bending[number * LoadTetModel.bendings.Count]);
 
-        float ranges = 20.0f;
+        float ranges = 3.0f;
 
         for(int i=0;i<number;i++){
             int PosOffset = i * LoadTetModel.positions.Count;
-            Vector3 Offset = new Vector3(UnityEngine.Random.Range(-ranges, ranges), UnityEngine.Random.Range(10.0f, 50.0f), UnityEngine.Random.Range(-ranges, ranges));
+            Vector3 Offset = new Vector3(UnityEngine.Random.Range(-ranges, ranges), 5.0f + (i * 7.0f), UnityEngine.Random.Range(-ranges, ranges));
             for(int j=0;j<LoadTetModel.positions.Count;j++){                
                 Positions[j+PosOffset] = _Positions[j] + Offset;
             }
@@ -304,6 +317,7 @@ public class GPUPBD : MonoBehaviour
             for(int j=0;j<LoadTetModel.triangles.Count;j++){
                 var t = _triangles[j];
                 triangles[j+TriOffset] = new Triangle(t.vertices[0] + PosOffset, t.vertices[1] + PosOffset, t.vertices[2] + PosOffset);
+                //Debug.Log(triangles[j+TriOffset].vertices[0] +","+triangles[j+TriOffset].vertices[1]+","+triangles[j+TriOffset].vertices[2]);
             }
             int TriArrOffset = i * LoadTetModel.triangleArr.Count;
             for(int j=0;j<LoadTetModel.triangleArr.Count;j++){
@@ -356,10 +370,10 @@ public class GPUPBD : MonoBehaviour
         WorldPositions = new Vector3[nodeCount];
         ProjectPositions = new Vector3[nodeCount];
         Velocities = new Vector3[nodeCount];
-        Forces = new Vector3[nodeCount];
+        Responses = new Vector3[nodeCount];
         WorldPositions.Initialize();
         Velocities.Initialize();
-        Forces.Initialize();
+        Responses.Initialize();
 
         vDataArray = new vertData[nodeCount];
 
@@ -412,17 +426,32 @@ public class GPUPBD : MonoBehaviour
 
         UInt3Struct[] deltaPosUintArray = new UInt3Struct[nodeCount];
         deltaPosUintArray.Initialize();
+
+        Int3Struct[] directionIntArray = new Int3Struct[nodeCount];
+        directionIntArray.Initialize();
+
+        directionDataGPU = new Int3Struct[nodeCount];
+
         Vector3[] deltaPositionArray = new Vector3[nodeCount];
         deltaPositionArray.Initialize();
 
         int[] deltaCounterArray = new int[nodeCount];
         deltaCounterArray.Initialize();
 
+        int[] directionCounterArray = new int[nodeCount];
+        directionCounterArray.Initialize();
+
         deltaPositionsBuffer = new ComputeBuffer(nodeCount, sizeof(float) * 3);
         deltaPositionsBuffer.SetData(deltaPositionArray);
 
-        deltaPositionsUIntBuffer = new ComputeBuffer(nodeCount, sizeof(uint) * 3);
-        deltaPositionsUIntBuffer.SetData(deltaPosUintArray);
+        deltaPositionsIntBuffer = new ComputeBuffer(nodeCount, sizeof(uint) * 3);
+        deltaPositionsIntBuffer.SetData(deltaPosUintArray);
+
+        directionIntBuffer = new ComputeBuffer(nodeCount, sizeof(int) * 3);
+        directionIntBuffer.SetData(directionIntArray);
+
+        directionCounterBuffer = new ComputeBuffer(nodeCount, sizeof(int));
+        directionCounterBuffer.SetData(directionCounterArray);
 
         deltaCounterBuffer = new ComputeBuffer(nodeCount, sizeof(int));
         deltaCounterBuffer.SetData(deltaCounterArray);
@@ -476,7 +505,10 @@ public class GPUPBD : MonoBehaviour
             initTrianglePtr.Add(initTriangle.Count);
         }
 
-        print(initTrianglePtr.Count);
+        foreach(var data in triangles){
+            //Debug.Log(data);
+        }
+        //print(initTrianglePtr);
 
         triangleBuffer = new ComputeBuffer(initTriangle.Count, (sizeof(int) * 3));
         triangleBuffer.SetData(initTriangle.ToArray());
@@ -534,6 +566,10 @@ public class GPUPBD : MonoBehaviour
         //for rendering
         computeVerticesNormal = computeShaderobj.FindKernel("computeVerticesNormal");
 
+        computeCollisionHandling = collisionComputeShader.FindKernel("CollisionHandling");
+
+        computeCollisionResponse = collisionComputeShader.FindKernel("CollisionResponse");
+
     }
     private void setupComputeShader()
     {
@@ -543,6 +579,7 @@ public class GPUPBD : MonoBehaviour
         computeShaderobj.SetInt("triCount", triCount);
         computeShaderobj.SetInt("tetCount", tetCount);
         computeShaderobj.SetInt("bendingCount", bendingCount);
+        collisionComputeShader.SetInt("triCount", triCount / numberOfObjects);
 
         computeShaderobj.SetFloat("dt", dt);
         computeShaderobj.SetFloat("invMass", invMass);
@@ -563,14 +600,14 @@ public class GPUPBD : MonoBehaviour
 
         //Kernel #2
         computeShaderobj.SetBuffer(satisfyDistanceConstraintKernel, "deltaPos", deltaPositionsBuffer);            //for find the correct project position
-        computeShaderobj.SetBuffer(satisfyDistanceConstraintKernel, "deltaPosAsInt", deltaPositionsUIntBuffer);   //for find the correct project position
+        computeShaderobj.SetBuffer(satisfyDistanceConstraintKernel, "deltaPosAsInt", deltaPositionsIntBuffer);   //for find the correct project position
         computeShaderobj.SetBuffer(satisfyDistanceConstraintKernel, "deltaCount", deltaCounterBuffer);            //for find the correct project position
         computeShaderobj.SetBuffer(satisfyDistanceConstraintKernel, "ProjectedPositions", projectedPositionsBuffer);
         computeShaderobj.SetBuffer(satisfyDistanceConstraintKernel, "distanceConstraints", distanceConstraintsBuffer);
         computeShaderobj.SetBuffer(satisfyDistanceConstraintKernel, "Positions", positionsBuffer);
 
         computeShaderobj.SetBuffer(satisfyBendingConstraintKernel, "deltaPos", deltaPositionsBuffer);            //for find the correct project position
-        computeShaderobj.SetBuffer(satisfyBendingConstraintKernel, "deltaPosAsInt", deltaPositionsUIntBuffer);   //for find the correct project position
+        computeShaderobj.SetBuffer(satisfyBendingConstraintKernel, "deltaPosAsInt", deltaPositionsIntBuffer);   //for find the correct project position
         computeShaderobj.SetBuffer(satisfyBendingConstraintKernel, "deltaCount", deltaCounterBuffer);            //for find the correct project position
         computeShaderobj.SetBuffer(satisfyBendingConstraintKernel, "ProjectedPositions", projectedPositionsBuffer);
         computeShaderobj.SetBuffer(satisfyBendingConstraintKernel, "bendingConstraints", bendingConstraintsBuffer);
@@ -578,7 +615,7 @@ public class GPUPBD : MonoBehaviour
         computeShaderobj.SetBuffer(satisfyBendingConstraintKernel, "Positions", positionsBuffer);
 
         computeShaderobj.SetBuffer(satisfyTetVolConstraintKernel, "deltaPos", deltaPositionsBuffer);            //for find the correct project position
-        computeShaderobj.SetBuffer(satisfyTetVolConstraintKernel, "deltaPosAsInt", deltaPositionsUIntBuffer);   //for find the correct project position
+        computeShaderobj.SetBuffer(satisfyTetVolConstraintKernel, "deltaPosAsInt", deltaPositionsIntBuffer);   //for find the correct project position
         computeShaderobj.SetBuffer(satisfyTetVolConstraintKernel, "deltaCount", deltaCounterBuffer);            //for find the correct project position
         computeShaderobj.SetBuffer(satisfyTetVolConstraintKernel, "ProjectedPositions", projectedPositionsBuffer);
         computeShaderobj.SetBuffer(satisfyTetVolConstraintKernel, "tetVolumeConstraints", tetVolConstraintsBuffer);
@@ -586,7 +623,7 @@ public class GPUPBD : MonoBehaviour
         computeShaderobj.SetBuffer(satisfyTetVolConstraintKernel, "Positions", positionsBuffer);
 
         computeShaderobj.SetBuffer(averageConstraintDeltasKernel, "deltaPos", deltaPositionsBuffer);            //for find the correct project position
-        computeShaderobj.SetBuffer(averageConstraintDeltasKernel, "deltaPosAsInt", deltaPositionsUIntBuffer);   //for find the correct project position
+        computeShaderobj.SetBuffer(averageConstraintDeltasKernel, "deltaPosAsInt", deltaPositionsIntBuffer);   //for find the correct project position
         computeShaderobj.SetBuffer(averageConstraintDeltasKernel, "deltaCount", deltaCounterBuffer);            //for find the correct project position
         computeShaderobj.SetBuffer(averageConstraintDeltasKernel, "ProjectedPositions", projectedPositionsBuffer);
         computeShaderobj.SetBuffer(averageConstraintDeltasKernel, "distanceConstraints", distanceConstraintsBuffer);
@@ -613,6 +650,18 @@ public class GPUPBD : MonoBehaviour
         computeShaderobj.SetBuffer(computeVerticesNormal, "TrianglePtr", triangleIndicesBuffer);
         computeShaderobj.SetBuffer(computeVerticesNormal, "vertsBuff", vertsBuff); //passing to rendering
         computeShaderobj.SetBuffer(computeVerticesNormal, "objVolume", objVolumeBuffer);
+
+        collisionComputeShader.SetBuffer(computeCollisionHandling, "positions", positionsBuffer);
+        collisionComputeShader.SetBuffer(computeCollisionHandling, "velocities", velocitiesBuffer);
+        collisionComputeShader.SetBuffer(computeCollisionHandling, "triangles", triangleBuffer);        
+        collisionComputeShader.SetBuffer(computeCollisionHandling, "directions", directionIntBuffer);        
+        collisionComputeShader.SetBuffer(computeCollisionHandling, "directionCount", directionCounterBuffer);        
+
+        collisionComputeShader.SetBuffer(computeCollisionResponse, "positions", positionsBuffer);
+        collisionComputeShader.SetBuffer(computeCollisionResponse, "velocities", velocitiesBuffer);
+        collisionComputeShader.SetBuffer(computeCollisionResponse, "triangles", triangleBuffer);        
+        collisionComputeShader.SetBuffer(computeCollisionResponse, "directions", directionIntBuffer);        
+        collisionComputeShader.SetBuffer(computeCollisionResponse, "directionCount", directionCounterBuffer);        
     }
 
     void setup()
@@ -655,6 +704,19 @@ public class GPUPBD : MonoBehaviour
         ////update uniform data and GPU buffer here
         ////PBD algorithm
         computeShaderobj.Dispatch(applyExplicitEulerKernel, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
+        if(calculateCollision){
+            collisionComputeShader.Dispatch(computeCollisionHandling, (int)Mathf.Ceil(triCount / 32.0f), (int)Mathf.Ceil(triCount / 32.0f), 1);
+
+            if(flag){
+                directionIntBuffer.GetData(directionDataGPU);
+
+                for(int i=0;i<directionDataGPU.Length;i++){
+                    Debug.Log(i+"="+directionDataGPU[i].deltaXInt +"," + directionDataGPU[i].deltaYInt +"," + directionDataGPU[i].deltaZInt);
+                }
+            }
+
+            collisionComputeShader.Dispatch(computeCollisionResponse, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
+        }
         ////damp velocity() here
         for (int i = 0; i < iteration; i++)
         {
@@ -692,6 +754,10 @@ public class GPUPBD : MonoBehaviour
         
         dispatchComputeShader();
         renderObject();
+
+        if(Input.GetKeyDown(KeyCode.P)){
+            flag = true;
+        }
 
         if (writeVolumeToFile)
         {
@@ -769,6 +835,21 @@ public class GPUPBD : MonoBehaviour
             string text = string.Format("Volume: {0:0.00} %", vLost);
             GUI.Label(rect, text, style);
         }
+
+        if(true){
+            float fps = 1.0f / Time.deltaTime;
+            float ms = Time.deltaTime * 1000.0f;
+            string text = string.Format("{0:N1} FPS ({1:N1}ms)", fps, ms);
+
+            int w = Screen.width, h = Screen.height;
+            GUIStyle style = new GUIStyle();
+            rectPos = new Rect(0 + xOffset, yOffset, w, h * 2 / 100);
+            Rect rect = rectPos;
+            style.fontSize = 50;
+            style.normal.textColor = color;
+
+            GUI.Label(rect, text, style);
+        }
     }
     private void OnDestroy()
     {
@@ -784,7 +865,7 @@ public class GPUPBD : MonoBehaviour
             velocitiesBuffer.Dispose();
             projectedPositionsBuffer.Dispose();
             deltaPositionsBuffer.Dispose();
-            deltaPositionsUIntBuffer.Dispose();
+            deltaPositionsIntBuffer.Dispose();
             distanceConstraintsBuffer.Dispose();
             bendingConstraintsBuffer.Dispose();
             tetVolConstraintsBuffer.Dispose();

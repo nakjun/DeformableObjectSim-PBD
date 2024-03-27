@@ -98,4 +98,10 @@ namespace Assets.script
         public uint deltaYInt;
         public uint deltaZInt;
     }
+    public struct Int3Struct
+    {
+        public uint deltaXInt;
+        public uint deltaYInt;
+        public uint deltaZInt;
+    }
 }

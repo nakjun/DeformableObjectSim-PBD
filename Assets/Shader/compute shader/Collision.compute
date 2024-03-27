@@ -1,0 +1,342 @@
+struct Tri
+{
+    float3 vertex0;
+    float3 vertex1;
+    float3 vertex2;
+};
+
+struct Line {
+    float3 p0;
+    float3 p1;
+    float3 direction;
+    float3 origin;
+};
+
+struct Triangle
+{
+    int v0;
+    int v1;
+    int v2;
+};
+
+struct collisionResult{
+    bool isCollide;
+    float3 hitPoint;
+};
+
+#define Epsilon 0.00001
+
+uint triCount;
+
+RWStructuredBuffer<float3> positions;
+RWStructuredBuffer<float3> velocities;
+RWStructuredBuffer<int3> directions;
+RWStructuredBuffer<int> directionCount;
+RWStructuredBuffer<Triangle> triangles;
+
+void AtomicAddDirecitons(int index, float direction, int axis) {
+    uint i_val = asuint(direction);
+    uint tmp0 = 0;
+    uint tmp1;
+
+    [allow_uav_condition]
+    while (true) {
+        InterlockedCompareExchange(directions[index][axis], tmp0, i_val, tmp1);
+
+        if (tmp1 == tmp0) {
+            break;
+        }
+
+        tmp0 = tmp1;
+        i_val = asuint(direction + asfloat(tmp1));
+    }
+
+    return;
+}
+
+///////////// Tri-Intersection function ////////////
+float3 ProjectPointOnPlane(float3 p, float3 planeNormal, float3 planePoint)
+{
+    float d = dot(planeNormal, (p - planePoint)) / length(planeNormal) ;
+    return p - d * planeNormal;
+}
+
+bool IsPointInsideTriangle(float3 p, Tri tri)
+{
+    float3 normal = normalize(cross(tri.vertex1 - tri.vertex0, tri.vertex2 - tri.vertex0));
+
+    // ���� �ﰢ�� ��鿡 ����
+    float3 projectedPoint = ProjectPointOnPlane(p, normal, tri.vertex0);
+
+    //if (distance(projectedPoint, p) > 0.1) return false;
+    if (distance(projectedPoint, p) > 0.01) return false;
+
+    // ������ ���� ���� ���� �Ǵ� ����
+    float3 edge1 = tri.vertex1 - tri.vertex0;
+    float3 vp1 = projectedPoint - tri.vertex0;
+    if (dot(cross(edge1, vp1), normal) < 0) return false;
+
+    float3 edge2 = tri.vertex2 - tri.vertex1;
+    float3 vp2 = projectedPoint - tri.vertex1;
+    if (dot(cross(edge2, vp2), normal) < 0) return false;
+
+    float3 edge3 = tri.vertex0 - tri.vertex2;
+    float3 vp3 = projectedPoint - tri.vertex2;
+    if (dot(cross(edge3, vp3), normal) < 0) return false;
+
+    return true; // ��� �˻縦 ����ߴٸ�, ������ ���� �ﰢ�� ���ο� �ֽ��ϴ�.
+}
+
+collisionResult Intersect(Tri tri, Line ray)
+{
+    collisionResult cr;
+    cr.isCollide = false;
+    cr.hitPoint = float3(0.0, 0.0, 0.0);
+
+    // Vectors from p1 to p2/p3 (edges)
+    //Find vectors for edges sharing vertex/point p1
+    float3 e1 = tri.vertex1 - tri.vertex0;
+    float3 e2 = tri.vertex2 - tri.vertex0;
+
+    ray.direction = normalize(ray.p1 - ray.p0);
+    float3 p = cross(ray.direction, e2);
+
+    //Calculate determinat
+    float det = dot(e1, p);
+
+    //if determinant is near zero, ray lies in plane of triangle otherwise not
+    //if (det > -Mathf.Epsilon && det < Mathf.Epsilon)
+    if (det > -Epsilon && det < Epsilon)
+    {
+        bool coplanar = IsPointInsideTriangle(ray.p0, tri);
+        bool coplanar2 = IsPointInsideTriangle(ray.p1, tri);
+
+        cr.isCollide = coplanar || coplanar2;
+        if (coplanar) cr.hitPoint = ray.p0;
+        if (coplanar2) cr.hitPoint = ray.p1;
+
+        return cr;
+    }
+    float invDet = 1.0f / det;
+
+    //calculate distance from p1 to ray origin
+    ray.origin = ray.p0;
+    float3 t = ray.origin - tri.vertex0;
+
+    //Calculate u parameter
+    float u = dot(t, p) * invDet;
+
+    //Check for ray hit
+    if (u < 0 || u > 1) { return cr; }
+
+    //Prepare to test v parameter
+    float3 q = cross(t, e1);
+
+    //Calculate v parameter
+    float v = dot(ray.direction, q) * invDet;
+
+    //Check for ray hit
+    if (v < 0 || u + v > 1) { return cr; }
+
+    // intersection point
+    cr.hitPoint = tri.vertex0 + u * e1 + v * e2;
+
+    if ((dot(e2, q) * invDet) > Epsilon)
+    {
+        cr.isCollide=true;
+        //ray does intersect            
+        return cr;
+    }
+    cr.isCollide = false;
+    cr.hitPoint = float3(0.0, 0.0, 0.0);
+    // No hit at all
+    return cr;
+}
+
+collisionResult CheckEdgeCollision(float3 vertex1, float3 vertex2, Tri t)
+{
+    Line edge;
+
+    edge.p0 = vertex1;
+    edge.p1 = vertex2;
+
+    return Intersect(t, edge);
+}
+
+
+collisionResult Detection(Tri t1, Tri t2)
+{
+    collisionResult res1 = CheckEdgeCollision(t1.vertex0, t1.vertex1, t2);
+    collisionResult res2 = CheckEdgeCollision(t1.vertex0, t1.vertex2, t2);
+    collisionResult res3 = CheckEdgeCollision(t1.vertex1, t1.vertex2, t2);
+
+    collisionResult res4 = CheckEdgeCollision(t2.vertex0, t2.vertex1, t1);
+    collisionResult res5 = CheckEdgeCollision(t2.vertex0, t2.vertex2, t1);
+    collisionResult res6 = CheckEdgeCollision(t2.vertex1, t2.vertex2, t1);
+
+    collisionResult cr;
+
+    bool c1 = res1.isCollide || res2.isCollide || res3.isCollide;
+    bool c2 = res4.isCollide || res5.isCollide || res6.isCollide;
+
+    cr.isCollide = c1 && c2;
+    cr.hitPoint = float3(0.0, 0.0, 0.0);
+
+    if(cr.isCollide) {
+        float3 collisionPoint = float3(0.0, 0.0, 0.0);
+        int count = 0;
+        if(res1.isCollide){
+            collisionPoint += res1.hitPoint;
+            count += 1;
+        }
+        if(res2.isCollide){
+            collisionPoint += res2.hitPoint;
+            count += 1;
+        }
+        if(res3.isCollide){
+            collisionPoint += res3.hitPoint;
+            count += 1;
+        }
+        collisionPoint = collisionPoint / float(count);
+
+        cr.hitPoint = collisionPoint;
+    }
+
+    return cr;
+}
+
+
+#pragma kernel CollisionResponse
+[numthreads(1024, 1, 1)]
+void CollisionResponse (uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    float3 pos = positions[i];
+    float3 vel = velocities[i];
+
+    if(directionCount[i] > 0)
+    {
+        vel *= -0.1;
+
+        float3 dr = float3(0.0, 0.0, 0.0);
+        dr.x += (directions[i][0] / 100.0f);
+        dr.y += (directions[i][1] / 100.0f);
+        dr.z += (directions[i][2] / 100.0f);
+
+        dr = dr / (float)directionCount[i];
+
+        pos += (dr*0.01);
+        vel += (dr*0.1);
+
+        velocities[i] = vel;
+        positions[i] = pos;
+    }
+
+    directions[i][0] = uint(0);
+    directions[i][1] = uint(0);
+    directions[i][2] = uint(0);
+    directionCount[i] = uint(0);
+}
+
+#pragma kernel CollisionHandling
+[numthreads(32,32,1)]
+void CollisionHandling (uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    uint j = id.y;
+
+    int objIndex1 = floor(float(i) / triCount);
+    int objIndex2 = floor(float(j) / triCount);
+
+    if(objIndex1 != objIndex2 && objIndex1 >= objIndex2)
+    {
+        Triangle t1 = triangles[i];
+        Triangle t2 = triangles[j];
+
+        Tri t1Vertices;
+        t1Vertices.vertex0 = positions[t1.v0];
+        t1Vertices.vertex1 = positions[t1.v1];
+        t1Vertices.vertex2 = positions[t1.v2];
+
+        Tri t2Vertices;
+        t2Vertices.vertex0 = positions[t2.v0];
+        t2Vertices.vertex1 = positions[t2.v1];
+        t2Vertices.vertex2 = positions[t2.v2];
+
+        collisionResult res = Detection(t1Vertices, t2Vertices);
+
+        if(res.isCollide)
+        {
+            InterlockedAdd(directions[t1.v0][0], res.hitPoint.x * 100);
+            InterlockedAdd(directions[t1.v0][1], res.hitPoint.y * 100);
+            InterlockedAdd(directions[t1.v0][2], res.hitPoint.z * 100);
+            InterlockedAdd(directionCount[t1.v0],1);
+
+            InterlockedAdd(directions[t1.v1][0], res.hitPoint.x * 100);
+            InterlockedAdd(directions[t1.v1][1], res.hitPoint.y * 100);
+            InterlockedAdd(directions[t1.v1][2], res.hitPoint.z * 100);
+            InterlockedAdd(directionCount[t1.v1],1);
+
+            InterlockedAdd(directions[t1.v2][0], res.hitPoint.x * 100);
+            InterlockedAdd(directions[t1.v2][1], res.hitPoint.y * 100);
+            InterlockedAdd(directions[t1.v2][2], res.hitPoint.z * 100);
+            InterlockedAdd(directionCount[t1.v2],1);
+
+            //반대
+
+            InterlockedAdd(directions[t2.v0][0], -res.hitPoint.x * 100);
+            InterlockedAdd(directions[t2.v0][1], -res.hitPoint.y * 100);
+            InterlockedAdd(directions[t2.v0][2], -res.hitPoint.z * 100);
+            InterlockedAdd(directionCount[t2.v0],1);
+
+            InterlockedAdd(directions[t2.v1][0], -res.hitPoint.x * 100);
+            InterlockedAdd(directions[t2.v1][1], -res.hitPoint.y * 100);
+            InterlockedAdd(directions[t2.v1][2], -res.hitPoint.z * 100);
+            InterlockedAdd(directionCount[t2.v1],1);
+
+            InterlockedAdd(directions[t2.v2][0], -res.hitPoint.x * 100);
+            InterlockedAdd(directions[t2.v2][1], -res.hitPoint.y * 100);
+            InterlockedAdd(directions[t2.v2][2], -res.hitPoint.z * 100);
+            InterlockedAdd(directionCount[t2.v2],1);
+        }
+        
+        // collisionResult res1 = CheckEdgeCollision(t1Vertices.vertex0, t1Vertices.vertex1, t2Vertices);
+        // collisionResult res2 = CheckEdgeCollision(t1Vertices.vertex0, t1Vertices.vertex2, t2Vertices);
+        // collisionResult res3 = CheckEdgeCollision(t1Vertices.vertex1, t1Vertices.vertex2, t2Vertices);
+
+        // float3 triNormal = (t2Vertices.vertex0 + t2Vertices.vertex1 + t2Vertices.vertex2) / 3.0;
+        // triNormal *= 0.03;
+
+        // if(res1.isCollide && res2.isCollide)
+        // {
+        //     //0번 인덱스의 노드에 적용
+        //     InterlockedAdd(directions[t1.v0][0], triNormal.x * 100);
+        //     InterlockedAdd(directions[t1.v0][1], triNormal.y * 100);
+        //     InterlockedAdd(directions[t1.v0][2], triNormal.z * 100);
+
+        //     InterlockedAdd(directionCount[t1.v0],1);
+        // }
+        // if(res1.isCollide && res3.isCollide)
+        // {
+        //     //0번 인덱스의 노드에 적용
+        //     InterlockedAdd(directions[t1.v1][0], triNormal.x * 100);
+        //     InterlockedAdd(directions[t1.v1][1], triNormal.y * 100);
+        //     InterlockedAdd(directions[t1.v1][2], triNormal.z * 100);
+
+        //     InterlockedAdd(directionCount[t1.v1],1);
+        // }
+        // if(res2.isCollide && res3.isCollide)
+        // {
+        //     //0번 인덱스의 노드에 적용
+        //     InterlockedAdd(directions[t1.v2][0], triNormal.x * 100);
+        //     InterlockedAdd(directions[t1.v2][1], triNormal.y * 100);
+        //     InterlockedAdd(directions[t1.v2][2], triNormal.z * 100);
+
+        //     InterlockedAdd(directionCount[t1.v2],1);
+        // }
+
+
+
+        
+    }
+}
