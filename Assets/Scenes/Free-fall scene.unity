@@ -839,18 +839,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   model: 0
-  numberOfObjects: 2
+  numberOfObjects: 40
   invMass: 1
-  dt: 0.001
+  dt: 0.002
   gravity: {x: 0, y: -9.81, z: 0}
-  iteration: 30
+  iteration: 5
   convergence_factor: 1
-  stretchStiffness: 1
-  compressStiffness: 1
+  stretchStiffness: 10
+  compressStiffness: 10
   bendingStiffness: 2
-  volumeStiffness: 1
-  floor: {fileID: 317725964}
-  calculateCollision: 0
+  volumeStiffness: 5
+  floor: {fileID: 788422558}
+  calculateCollision: 1
   drawFPS: 0
   renderVolumeText: 0
   Text: 

@@ -95,6 +95,8 @@ public class GPUPBD : MonoBehaviour
     private ComputeBuffer triangleBuffer;
     private ComputeBuffer triangleIndicesBuffer;
 
+    private ComputeBuffer triBuffer2;
+
     private ComputeBuffer deltaPositionsBuffer;
     private ComputeBuffer deltaPositionsIntBuffer;
     private ComputeBuffer deltaCounterBuffer;
@@ -155,7 +157,6 @@ public class GPUPBD : MonoBehaviour
     [HideInInspector]
     List<string[]> tableData = new List<string[]>();
 
-    bool flag = false;
 
     void SelectModelName()
     {
@@ -306,7 +307,7 @@ public class GPUPBD : MonoBehaviour
         bendingConstraints = new List<Bending>(new Bending[number * LoadTetModel.bendings.Count]);
 
         float ranges = 3.0f;
-
+        string data = "";
         for(int i=0;i<number;i++){
             int PosOffset = i * LoadTetModel.positions.Count;
             Vector3 Offset = new Vector3(UnityEngine.Random.Range(-ranges, ranges), 5.0f + (i * 7.0f), UnityEngine.Random.Range(-ranges, ranges));
@@ -317,7 +318,7 @@ public class GPUPBD : MonoBehaviour
             for(int j=0;j<LoadTetModel.triangles.Count;j++){
                 var t = _triangles[j];
                 triangles[j+TriOffset] = new Triangle(t.vertices[0] + PosOffset, t.vertices[1] + PosOffset, t.vertices[2] + PosOffset);
-                //Debug.Log(triangles[j+TriOffset].vertices[0] +","+triangles[j+TriOffset].vertices[1]+","+triangles[j+TriOffset].vertices[2]);
+                data += "["+(j+TriOffset)+"]"+triangles[j+TriOffset].vertices[0] +","+triangles[j+TriOffset].vertices[1]+","+triangles[j+TriOffset].vertices[2] +"\r\n";
             }
             int TriArrOffset = i * LoadTetModel.triangleArr.Count;
             for(int j=0;j<LoadTetModel.triangleArr.Count;j++){
@@ -355,6 +356,8 @@ public class GPUPBD : MonoBehaviour
                 bendingConstraints[j+bendingOffset] = newBending;
             }
         }        
+
+        Debug.Log(data);
 
         nodeCount = Positions.Length;
         springCount = distanceConstraints.Count;
@@ -460,6 +463,15 @@ public class GPUPBD : MonoBehaviour
         List<int> initTrianglePtr = new List<int>(); //contain a group of affectd triangle to node
         //initTrianglePtr.Add(0);
 
+        MTriangle[] _tris = new MTriangle[triCount];
+
+        for(int i=0;i<triangles.Count;i++)
+        {
+            _tris[i].v0 = triangles[i].vertices[0];
+            _tris[i].v1 = triangles[i].vertices[1];
+            _tris[i].v2 = triangles[i].vertices[2];
+        }
+
         // for (int i = 0; i < nodeCount; i++)
         // {
         //     foreach (Triangle tri in triangles)
@@ -474,7 +486,7 @@ public class GPUPBD : MonoBehaviour
         //         }
         //     }
         //     initTrianglePtr.Add(initTriangle.Count);
-        // }
+        // }        
 
         Dictionary<int, List<int>> nodeTriangles = new Dictionary<int, List<int>>();
         for (int triIndex = 0; triIndex < triangles.Count; triIndex++)
@@ -505,13 +517,13 @@ public class GPUPBD : MonoBehaviour
             initTrianglePtr.Add(initTriangle.Count);
         }
 
-        foreach(var data in triangles){
-            //Debug.Log(data);
-        }
         //print(initTrianglePtr);
 
         triangleBuffer = new ComputeBuffer(initTriangle.Count, (sizeof(int) * 3));
         triangleBuffer.SetData(initTriangle.ToArray());
+
+        triBuffer2 = new ComputeBuffer(_tris.Length, (sizeof(int) * 3));
+        triBuffer2.SetData(_tris);
 
         triangleIndicesBuffer = new ComputeBuffer(initTrianglePtr.Count, sizeof(int));
         triangleIndicesBuffer.SetData(initTrianglePtr.ToArray());
@@ -580,6 +592,7 @@ public class GPUPBD : MonoBehaviour
         computeShaderobj.SetInt("tetCount", tetCount);
         computeShaderobj.SetInt("bendingCount", bendingCount);
         collisionComputeShader.SetInt("triCount", triCount / numberOfObjects);
+        Debug.Log("triCount per each Object : " + triCount / numberOfObjects); 
 
         computeShaderobj.SetFloat("dt", dt);
         computeShaderobj.SetFloat("invMass", invMass);
@@ -653,13 +666,13 @@ public class GPUPBD : MonoBehaviour
 
         collisionComputeShader.SetBuffer(computeCollisionHandling, "positions", positionsBuffer);
         collisionComputeShader.SetBuffer(computeCollisionHandling, "velocities", velocitiesBuffer);
-        collisionComputeShader.SetBuffer(computeCollisionHandling, "triangles", triangleBuffer);        
+        collisionComputeShader.SetBuffer(computeCollisionHandling, "triangles", triBuffer2);        
         collisionComputeShader.SetBuffer(computeCollisionHandling, "directions", directionIntBuffer);        
         collisionComputeShader.SetBuffer(computeCollisionHandling, "directionCount", directionCounterBuffer);        
 
         collisionComputeShader.SetBuffer(computeCollisionResponse, "positions", positionsBuffer);
         collisionComputeShader.SetBuffer(computeCollisionResponse, "velocities", velocitiesBuffer);
-        collisionComputeShader.SetBuffer(computeCollisionResponse, "triangles", triangleBuffer);        
+        collisionComputeShader.SetBuffer(computeCollisionResponse, "triangles", triBuffer2);        
         collisionComputeShader.SetBuffer(computeCollisionResponse, "directions", directionIntBuffer);        
         collisionComputeShader.SetBuffer(computeCollisionResponse, "directionCount", directionCounterBuffer);        
     }
@@ -707,12 +720,38 @@ public class GPUPBD : MonoBehaviour
         if(calculateCollision){
             collisionComputeShader.Dispatch(computeCollisionHandling, (int)Mathf.Ceil(triCount / 32.0f), (int)Mathf.Ceil(triCount / 32.0f), 1);
 
-            if(flag){
+            if(true){
                 directionIntBuffer.GetData(directionDataGPU);
 
                 for(int i=0;i<directionDataGPU.Length;i++){
-                    Debug.Log(i+"="+directionDataGPU[i].deltaXInt +"," + directionDataGPU[i].deltaYInt +"," + directionDataGPU[i].deltaZInt);
+                    if(directionDataGPU[i].deltaXInt==0 && directionDataGPU[i].deltaYInt==0 && directionDataGPU[i].deltaZInt==0){ continue;}
+                    //Debug.Log(i+"="+directionDataGPU[i].deltaXInt +"," + directionDataGPU[i].deltaYInt +"," + directionDataGPU[i].deltaZInt);
+                    
+                    // var i1 = directionDataGPU[i].deltaXInt;
+                    // var i2 = directionDataGPU[i].deltaYInt;
+
+                    // Debug.Log("i1 : " + i1 + "   i2 : " + i2);
+
+                    // int[] tris = new int[triCount * 3];
+                    // positionsBuffer.GetData(Positions);
+                    // triangleBuffer.GetData(tris);
+
+                    // //Debug.Log("v1 :"+Positions[i1] + ", v2 : " + Positions[i2]);
+                    // Debug.Log(tris[i1 * 3 + 0] + "," + tris[i1 * 3 + 1] + "," + tris[i1 * 3 + 2]);
+                    // Debug.Log(tris[i2 * 3 + 0] + "," + tris[i2 * 3 + 1] + "," + tris[i2 * 3 + 2]);
+
+                    // Debug.Log(Positions[tris[i1 * 3 + 0]] +"/"+Positions[tris[i1 * 3 + 0]]+"/"+Positions[tris[i1 * 3 + 2]]);
+                    // Debug.Log(Positions[tris[i2 * 3 + 0]] +"/"+Positions[tris[i2 * 3 + 0]]+"/"+Positions[tris[i2 * 3 + 2]]);
+                    
+
+
                 }
+
+                // positionsBuffer.GetData(Positions);
+                // foreach(var pos in Positions)
+                // {
+                //     Debug.Log(pos);
+                // }
             }
 
             collisionComputeShader.Dispatch(computeCollisionResponse, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
@@ -728,6 +767,10 @@ public class GPUPBD : MonoBehaviour
             computeShaderobj.Dispatch(averageConstraintDeltasKernel, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
 
             computeShaderobj.SetFloat("floorCoordY", (floor.transform.position).y);
+            computeShaderobj.SetFloat("floorCoordX1", -25);
+            computeShaderobj.SetFloat("floorCoordX2", 25);
+            computeShaderobj.SetFloat("floorCoordZ1", -25);
+            computeShaderobj.SetFloat("floorCoordZ2", 25);
             computeShaderobj.Dispatch(floorCollisionKernel, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
         }
         computeShaderobj.Dispatch(updatePositionsKernel, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
@@ -754,10 +797,6 @@ public class GPUPBD : MonoBehaviour
         
         dispatchComputeShader();
         renderObject();
-
-        if(Input.GetKeyDown(KeyCode.P)){
-            flag = true;
-        }
 
         if (writeVolumeToFile)
         {
@@ -857,6 +896,10 @@ public class GPUPBD : MonoBehaviour
         {
             vertsBuff.Dispose();
             triBuffer.Dispose();
+            triBuffer2.Dispose();
+
+            directionCounterBuffer.Dispose();
+            directionIntBuffer.Dispose();
 
             triangleBuffer.Dispose();
             triangleIndicesBuffer.Dispose();

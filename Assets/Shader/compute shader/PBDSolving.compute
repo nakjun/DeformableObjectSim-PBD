@@ -16,6 +16,10 @@ float convergence_factor;
 float3 gravity;
 
 float floorCoordY;
+float floorCoordX1;
+float floorCoordX2;
+float floorCoordZ1;
+float floorCoordZ2;
 //structure 
 
 struct vertData
@@ -367,7 +371,31 @@ void floorCollisionKernel(uint3 i : SV_DispatchThreadID)
     if ((ProjectedPositions[i.x]).y < floorCoordY)
     {
         ProjectedPositions[i.x].y = floorCoordY + 0.015f;
-        Velocities[i.x] = float3(0, 0, 0);
+        Velocities[i.x] *= 0.0;;
+    }
+
+    if ((ProjectedPositions[i.x]).x < floorCoordX1)
+    {
+        ProjectedPositions[i.x].x += 0.015f;
+        Velocities[i.x] *= 0.0;;
+    }
+
+    if ((ProjectedPositions[i.x]).x > floorCoordX2)
+    {
+        ProjectedPositions[i.x].x -= 0.015f;
+        Velocities[i.x] *= 0.0;;
+    }
+
+    if ((ProjectedPositions[i.x]).z < floorCoordZ1)
+    {
+        ProjectedPositions[i.x].z += 0.015f;
+        Velocities[i.x] *= 0.0;;
+    }
+
+    if ((ProjectedPositions[i.x]).z > floorCoordZ2)
+    {
+        ProjectedPositions[i.x].z -= 0.015f;
+        Velocities[i.x] *= 0.0;;
     }
 }
 
