@@ -306,7 +306,7 @@ public class GPUPBD : MonoBehaviour
         tetrahedrons = new List<Tetrahedron>(new Tetrahedron[number * LoadTetModel.tetrahedrons.Count]);
         bendingConstraints = new List<Bending>(new Bending[number * LoadTetModel.bendings.Count]);
 
-        float ranges = 3.0f;
+        float ranges = 20.0f;
         string data = "";
         for(int i=0;i<number;i++){
             int PosOffset = i * LoadTetModel.positions.Count;
