@@ -21,6 +21,7 @@ struct Triangle
 
 struct collisionResult{
     bool isCollide;
+    float3 hitPoint;
 };
 
 #define Epsilon 0.00001
@@ -87,8 +88,12 @@ bool IsPointInsideTriangle(float3 p, Tri tri)
     return true; // ��� �˻縦 ����ߴٸ�, ������ ���� �ﰢ�� ���ο� �ֽ��ϴ�.
 }
 
-bool Intersect(Tri tri, Line ray, float3 hit)
+collisionResult Intersect(Tri tri, Line ray)
 {
+    collisionResult cr;
+    cr.isCollide = false;
+    cr.hitPoint = float3(0.0, 0.0, 0.0);
+
     // Vectors from p1 to p2/p3 (edges)
     //Find vectors for edges sharing vertex/point p1
     float3 e1 = tri.vertex1 - tri.vertex0;
@@ -107,10 +112,13 @@ bool Intersect(Tri tri, Line ray, float3 hit)
         bool coplanar = IsPointInsideTriangle(ray.p0, tri);
         bool coplanar2 = IsPointInsideTriangle(ray.p1, tri);
 
-        if (coplanar) hit = ray.p0;
-        if (coplanar2) hit = ray.p1;
+        cr.hitPoint = float3(0.0, 0.0, 0.0);
+        if (coplanar) cr.hitPoint = ray.p0;
+        if (coplanar2) cr.hitPoint = ray.p1;
 
-        return coplanar || coplanar2;
+        cr.isCollide = coplanar || coplanar2;
+
+        return cr;
     }
     float invDet = 1.0f / det;
 
@@ -122,7 +130,9 @@ bool Intersect(Tri tri, Line ray, float3 hit)
     float u = dot(t, p) * invDet;
 
     //Check for ray hit
-    if (u < 0 || u > 1) { return false; }
+    if (u < 0 || u > 1) { cr.isCollide = false;
+    cr.hitPoint = float3(0.0, 0.0, 0.0);
+    return cr; }
 
     //Prepare to test v parameter
     float3 q = cross(t, e1);
@@ -131,22 +141,27 @@ bool Intersect(Tri tri, Line ray, float3 hit)
     float v = dot(ray.direction, q) * invDet;
 
     //Check for ray hit
-    if (v < 0 || u + v > 1) { return false; }
+    if (v < 0 || u + v > 1) { cr.isCollide = false;
+    cr.hitPoint = float3(0.0, 0.0, 0.0);
+    return cr; }
 
     // intersection point
-    hit = tri.vertex0 + u * e1 + v * e2;
+    cr.hitPoint = tri.vertex0 + u * e1 + v * e2;
 
     if ((dot(e2, q) * invDet) > Epsilon)
     {
+        cr.isCollide = true;
         //ray does intersect            
-        return true;
+        return cr;
     }
 
     // No hit at all
-    return false;
+    cr.isCollide = false;
+    cr.hitPoint = float3(0.0, 0.0, 0.0);
+    return cr;
 }
 
-bool CheckEdgeCollision(float3 vertex1, float3 vertex2, Tri t)
+collisionResult CheckEdgeCollision(float3 vertex1, float3 vertex2, Tri t)
 {
     //var edge = new Line();
     // Instantiate a Line struct
@@ -155,23 +170,23 @@ bool CheckEdgeCollision(float3 vertex1, float3 vertex2, Tri t)
     edge.p0 = vertex1;
     edge.p1 = vertex2;
 
-    return Intersect(t, edge,  hitPoint);
+    return Intersect(t, edge);
 }
 
-bool Detection(Tri t1, Tri t2)
-{
-    bool c1 = 
-    CheckEdgeCollision(t1.vertex0, t1.vertex1, t2) || 
-    CheckEdgeCollision(t1.vertex0, t1.vertex2, t2) || 
-    CheckEdgeCollision(t1.vertex1, t1.vertex2, t2);
+// bool Detection(Tri t1, Tri t2)
+// {
+//     bool c1 = 
+//     CheckEdgeCollision(t1.vertex0, t1.vertex1, t2) || 
+//     CheckEdgeCollision(t1.vertex0, t1.vertex2, t2) || 
+//     CheckEdgeCollision(t1.vertex1, t1.vertex2, t2);
 
-    bool c2 = 
-    CheckEdgeCollision(t2.vertex0, t2.vertex1, t1) || 
-    CheckEdgeCollision(t2.vertex0, t2.vertex2, t1) || 
-    CheckEdgeCollision(t2.vertex1, t2.vertex2, t1);
+//     bool c2 = 
+//     CheckEdgeCollision(t2.vertex0, t2.vertex1, t1) || 
+//     CheckEdgeCollision(t2.vertex0, t2.vertex2, t1) || 
+//     CheckEdgeCollision(t2.vertex1, t2.vertex2, t1);
 
-    return c1 && c2;
-}
+//     return c1 && c2;
+// }
 
 #pragma kernel CollisionResponse
 [numthreads(1024, 1, 1)]
@@ -184,16 +199,17 @@ void CollisionResponse (uint3 id : SV_DispatchThreadID)
     if(directionCount[i] > 0)
     {
         float3 dr = float3(0.0, 0.0, 0.0);
-        dr.x += (directions[i][0] / 100.0f);
-        dr.y += (directions[i][1] / 100.0f);
-        dr.z += (directions[i][2] / 100.0f);
+        dr.x += (directions[i][0]);
+        dr.y += (directions[i][1]);
+        dr.z += (directions[i][2]);
+        dr = dr / (directionCount[i] * 100);
         
-        dr = dr / (float)directionCount[i];
-        vel += (dr*0.05);
-        vel.y *= 0.01;
+        pos += (-vel * 0.01);
+
+        vel *= -1.0;
+        vel += (dr);
         
-        pos += (vel * 0.001);
-        pos += (dr*0.5);
+        pos += (dr * 0.6);
     }
     velocities[i] = vel;
     positions[i] = pos;
@@ -205,7 +221,7 @@ void CollisionResponse (uint3 id : SV_DispatchThreadID)
 }
 
 #pragma kernel CollisionHandling
-[numthreads(32,32,1)]
+[numthreads(16,16,1)]
 void CollisionHandling (uint3 id : SV_DispatchThreadID)
 {
     uint i = id.x;
@@ -229,50 +245,227 @@ void CollisionHandling (uint3 id : SV_DispatchThreadID)
         t2Vertices.vertex1 = positions[t2.v1];
         t2Vertices.vertex2 = positions[t2.v2];
 
-        bool res = Detection(t1Vertices, t2Vertices);
-        if(res)
+        // collisionResult r1 = CheckEdgeCollision(t1Vertices.vertex0, t1Vertices.vertex1, t2Vertices);
+        // collisionResult r2 = CheckEdgeCollision(t1Vertices.vertex0, t1Vertices.vertex2, t2Vertices);
+        // collisionResult r3 = CheckEdgeCollision(t1Vertices.vertex1, t1Vertices.vertex2, t2Vertices);
+
+        // collisionResult r4 = CheckEdgeCollision(t2Vertices.vertex0, t2Vertices.vertex1, t1Vertices);
+        // collisionResult r5 = CheckEdgeCollision(t2Vertices.vertex0, t2Vertices.vertex2, t1Vertices);
+        // collisionResult r6 = CheckEdgeCollision(t2Vertices.vertex1, t2Vertices.vertex2, t1Vertices);
+
+
+        collisionResult results[6];
+        results[0] = CheckEdgeCollision(t1Vertices.vertex0, t1Vertices.vertex1, t2Vertices);
+        results[1] = CheckEdgeCollision(t1Vertices.vertex0, t1Vertices.vertex2, t2Vertices);
+        results[2] = CheckEdgeCollision(t1Vertices.vertex1, t1Vertices.vertex2, t2Vertices);
+        results[3] = CheckEdgeCollision(t2Vertices.vertex0, t2Vertices.vertex1, t1Vertices);
+        results[4] = CheckEdgeCollision(t2Vertices.vertex0, t2Vertices.vertex2, t1Vertices);
+        results[5] = CheckEdgeCollision(t2Vertices.vertex1, t2Vertices.vertex2, t1Vertices);
+
+        bool c1 = (results[0].isCollide || results[1].isCollide || results[2].isCollide);
+        bool c2 = (results[3].isCollide || results[4].isCollide || results[5].isCollide);        
+
+        //InterlockedAdd(directions[t1.v0][0], -1);
+        if(c1&&c2)
         {
-            float3 triCenter = (t1Vertices.vertex0 + t1Vertices.vertex1 + t1Vertices.vertex2) / 3.0;            
-            float3 triCenter2 = (t2Vertices.vertex0 + t2Vertices.vertex1 + t2Vertices.vertex2) / 3.0;
-            
-            float3 dir_t1_v0 = normalize(triCenter2 - t1Vertices.vertex0);
-            float3 dir_t1_v1 = normalize(triCenter2 - t1Vertices.vertex1);
-            float3 dir_t1_v2 = normalize(triCenter2 - t1Vertices.vertex2);
+            float3 collisionCenter = float3(0.0, 0.0, 0.0);
+            int n = 0;
+            for (int k = 0; k < 6; k++)
+            {
+                if (results[k].isCollide)
+                {
+                    collisionCenter += results[k].hitPoint;
+                    n += 1;
+                }
+            }
+            collisionCenter /= float(n);
+            float3 centerT1 = (t1Vertices.vertex0+t1Vertices.vertex1+t1Vertices.vertex2) / 3.0;
+            float3 centerT2 = (t2Vertices.vertex0+t2Vertices.vertex1+t2Vertices.vertex2) / 3.0;
+            float3 dirT1 = normalize(collisionCenter - centerT1);
+            float3 dirT2 = normalize(collisionCenter - centerT2);
+            //point1
+            if(results[0].isCollide && results[1].isCollide)
+            {
+                InterlockedAdd(directions[t1.v0][0], dirT1.x * 100);
+                InterlockedAdd(directions[t1.v0][1], dirT1.y * 100);
+                InterlockedAdd(directions[t1.v0][2], dirT1.z * 100);
+                InterlockedAdd(directionCount[t1.v0],1);
+            }
+            //point2
+            if(results[0].isCollide && results[2].isCollide)
+            {
+                InterlockedAdd(directions[t1.v1][0], dirT1.x * 100);
+                InterlockedAdd(directions[t1.v1][1], dirT1.y * 100);
+                InterlockedAdd(directions[t1.v1][2], dirT1.z * 100);
+                InterlockedAdd(directionCount[t1.v1],1);
+            }
+            if(results[1].isCollide && results[2].isCollide)
+            {
+                InterlockedAdd(directions[t1.v2][0], dirT1.x * 100);
+                InterlockedAdd(directions[t1.v2][1], dirT1.y * 100);
+                InterlockedAdd(directions[t1.v2][2], dirT1.z * 100);
+                InterlockedAdd(directionCount[t1.v2],1);
+            }
 
-            InterlockedAdd(directions[t1.v0][0], dir_t1_v0.x * 100);
-            InterlockedAdd(directions[t1.v0][1], dir_t1_v0.y * 100);
-            InterlockedAdd(directions[t1.v0][2], dir_t1_v0.z * 100);
-            InterlockedAdd(directionCount[t1.v0],1);
+            //T2
 
-            InterlockedAdd(directions[t1.v1][0], dir_t1_v1.x * 100);
-            InterlockedAdd(directions[t1.v1][1], dir_t1_v1.y * 100);
-            InterlockedAdd(directions[t1.v1][2], dir_t1_v1.z * 100);
-            InterlockedAdd(directionCount[t1.v1],1);
+            //point1
+            if(results[3].isCollide && results[4].isCollide)
+            {
+                InterlockedAdd(directions[t2.v0][0], dirT2.x * 100);
+                InterlockedAdd(directions[t2.v0][1], dirT2.y * 100);
+                InterlockedAdd(directions[t2.v0][2], dirT2.z * 100);
+                InterlockedAdd(directionCount[t2.v0],1);
+            }
+            //point2
+            if(results[3].isCollide && results[5].isCollide)
+            {
+                InterlockedAdd(directions[t2.v1][0], dirT2.x * 100);
+                InterlockedAdd(directions[t2.v1][1], dirT2.y * 100);
+                InterlockedAdd(directions[t2.v1][2], dirT2.z * 100);
+                InterlockedAdd(directionCount[t2.v1],1);
+            }
+            if(results[4].isCollide && results[5].isCollide)
+            {
+                InterlockedAdd(directions[t2.v2][0], dirT2.x * 100);
+                InterlockedAdd(directions[t2.v2][1], dirT2.y * 100);
+                InterlockedAdd(directions[t2.v2][2], dirT2.z * 100);
+                InterlockedAdd(directionCount[t2.v2],1);
+            }
 
-            InterlockedAdd(directions[t1.v2][0], dir_t1_v2.x * 100);
-            InterlockedAdd(directions[t1.v2][1], dir_t1_v2.y * 100);
-            InterlockedAdd(directions[t1.v2][2], dir_t1_v2.z * 100);
-            InterlockedAdd(directionCount[t1.v2],1);
+            // //point1
+            // if(r1.isCollide && r2.isCollide)
+            // {
+            //     float3 cPoint = float3(0.0, 0.0, 0.0);
+            //     cPoint += r1.hitPoint;
+            //     cPoint += r2.hitPoint;
+            //     cPoint /= 2.0;
 
-            //반대
-            float3 dir_t2_v0 = normalize(triCenter - t2Vertices.vertex0);
-            float3 dir_t2_v1 = normalize(triCenter - t2Vertices.vertex1);
-            float3 dir_t2_v2 = normalize(triCenter - t2Vertices.vertex2);
+            //     float3 direction = normalize(cPoint-t1Vertices.vertex0) * -1.0;
+            //     InterlockedAdd(directions[t1.v0][0], direction.x * 100);
+            //     InterlockedAdd(directions[t1.v0][1], direction.y * 100);
+            //     InterlockedAdd(directions[t1.v0][2], direction.z * 100);
+            //     InterlockedAdd(directionCount[t1.v0],1);
+            // }
+            // //point2
+            // if(r1.isCollide && r3.isCollide)
+            // {
+            //     float3 cPoint = float3(0.0, 0.0, 0.0);
+            //     cPoint += r1.hitPoint;
+            //     cPoint += r3.hitPoint;
+            //     cPoint /= 2.0;
 
-            InterlockedAdd(directions[t2.v0][0], dir_t2_v0.x * 100);
-            InterlockedAdd(directions[t2.v0][1], dir_t2_v0.y * 100);
-            InterlockedAdd(directions[t2.v0][2], dir_t2_v0.z * 100);
-            InterlockedAdd(directionCount[t2.v0],1);
+            //     float3 direction = normalize(cPoint-t1Vertices.vertex1) * -1.0;
+            //     InterlockedAdd(directions[t1.v1][0], direction.x * 100);
+            //     InterlockedAdd(directions[t1.v1][1], direction.y * 100);
+            //     InterlockedAdd(directions[t1.v1][2], direction.z * 100);
+            //     InterlockedAdd(directionCount[t1.v1],1);
+            // }
+            // if(r2.isCollide && r3.isCollide)
+            // {
+            //     float3 cPoint = float3(0.0, 0.0, 0.0);
+            //     cPoint += r2.hitPoint;
+            //     cPoint += r3.hitPoint;
+            //     cPoint /= 2.0;
 
-            InterlockedAdd(directions[t2.v1][0], dir_t2_v1.x * 100);
-            InterlockedAdd(directions[t2.v1][1], dir_t2_v1.y * 100);
-            InterlockedAdd(directions[t2.v1][2], dir_t2_v1.z * 100);
-            InterlockedAdd(directionCount[t2.v1],1);
+                
 
-            InterlockedAdd(directions[t2.v2][0], dir_t2_v2.x * 100);
-            InterlockedAdd(directions[t2.v2][1], dir_t2_v2.y * 100);
-            InterlockedAdd(directions[t2.v2][2], dir_t2_v2.z * 100);
-            InterlockedAdd(directionCount[t2.v2],1);
+            //     float3 direction = normalize(cPoint-t1Vertices.vertex2) * -1.0;
+            //     InterlockedAdd(directions[t1.v2][0], direction.x * 100);
+            //     InterlockedAdd(directions[t1.v2][1], direction.y * 100);
+            //     InterlockedAdd(directions[t1.v2][2], direction.z * 100);
+            //     InterlockedAdd(directionCount[t1.v2],1);
+            // }
+
+            // //T2
+
+            // //point1
+            // if(r4.isCollide && r5.isCollide)
+            // {
+            //     float3 cPoint = float3(0.0, 0.0, 0.0);
+            //     cPoint += r4.hitPoint;
+            //     cPoint += r5.hitPoint;
+            //     cPoint /= 2.0;
+
+            //     float3 direction = normalize(cPoint-t2Vertices.vertex0) * -1.0;
+            //     InterlockedAdd(directions[t2.v0][0], direction.x * 100);
+            //     InterlockedAdd(directions[t2.v0][1], direction.y * 100);
+            //     InterlockedAdd(directions[t2.v0][2], direction.z * 100);
+            //     InterlockedAdd(directionCount[t2.v0],1);
+            // }
+            // //point2
+            // if(r4.isCollide && r6.isCollide)
+            // {
+            //     float3 cPoint = float3(0.0, 0.0, 0.0);
+            //     cPoint += r4.hitPoint;
+            //     cPoint += r6.hitPoint;
+            //     cPoint /= 2.0;
+
+            //     float3 direction = normalize(cPoint-t2Vertices.vertex1) * -1.0;
+            //     InterlockedAdd(directions[t2.v1][0], direction.x * 100);
+            //     InterlockedAdd(directions[t2.v1][1], direction.y * 100);
+            //     InterlockedAdd(directions[t2.v1][2], direction.z * 100);
+            //     InterlockedAdd(directionCount[t2.v1],1);
+            // }
+            // if(r5.isCollide && r6.isCollide)
+            // {
+            //     float3 cPoint = float3(0.0, 0.0, 0.0);
+            //     cPoint += r5.hitPoint;
+            //     cPoint += r6.hitPoint;
+            //     cPoint /= 2.0;
+
+            //     float3 direction = normalize(cPoint-t2Vertices.vertex2) * -1.0;
+            //     InterlockedAdd(directions[t2.v2][0], direction.x * 100);
+            //     InterlockedAdd(directions[t2.v2][1], direction.y * 100);
+            //     InterlockedAdd(directions[t2.v2][2], direction.z * 100);
+            //     InterlockedAdd(directionCount[t2.v2],1);
+            // }
         }
+
+        //bool res = Detection(t1Vertices, t2Vertices);
+        // if(res)
+        // {
+        //     float3 triCenter = (t1Vertices.vertex0 + t1Vertices.vertex1 + t1Vertices.vertex2) / 3.0;            
+        //     float3 triCenter2 = (t2Vertices.vertex0 + t2Vertices.vertex1 + t2Vertices.vertex2) / 3.0;
+            
+        //     float3 dir_t1_v0 = normalize(triCenter2 - t1Vertices.vertex0);
+        //     float3 dir_t1_v1 = normalize(triCenter2 - t1Vertices.vertex1);
+        //     float3 dir_t1_v2 = normalize(triCenter2 - t1Vertices.vertex2);
+
+        //     InterlockedAdd(directions[t1.v0][0], dir_t1_v0.x * 100);
+        //     InterlockedAdd(directions[t1.v0][1], dir_t1_v0.y * 100);
+        //     InterlockedAdd(directions[t1.v0][2], dir_t1_v0.z * 100);
+        //     InterlockedAdd(directionCount[t1.v0],1);
+
+        //     InterlockedAdd(directions[t1.v1][0], dir_t1_v1.x * 100);
+        //     InterlockedAdd(directions[t1.v1][1], dir_t1_v1.y * 100);
+        //     InterlockedAdd(directions[t1.v1][2], dir_t1_v1.z * 100);
+        //     InterlockedAdd(directionCount[t1.v1],1);
+
+        //     InterlockedAdd(directions[t1.v2][0], dir_t1_v2.x * 100);
+        //     InterlockedAdd(directions[t1.v2][1], dir_t1_v2.y * 100);
+        //     InterlockedAdd(directions[t1.v2][2], dir_t1_v2.z * 100);
+        //     InterlockedAdd(directionCount[t1.v2],1);
+
+        //     //반대
+        //     float3 dir_t2_v0 = normalize(triCenter - t2Vertices.vertex0);
+        //     float3 dir_t2_v1 = normalize(triCenter - t2Vertices.vertex1);
+        //     float3 dir_t2_v2 = normalize(triCenter - t2Vertices.vertex2);
+
+        //     InterlockedAdd(directions[t2.v0][0], dir_t2_v0.x * 100);
+        //     InterlockedAdd(directions[t2.v0][1], dir_t2_v0.y * 100);
+        //     InterlockedAdd(directions[t2.v0][2], dir_t2_v0.z * 100);
+        //     InterlockedAdd(directionCount[t2.v0],1);
+
+        //     InterlockedAdd(directions[t2.v1][0], dir_t2_v1.x * 100);
+        //     InterlockedAdd(directions[t2.v1][1], dir_t2_v1.y * 100);
+        //     InterlockedAdd(directions[t2.v1][2], dir_t2_v1.z * 100);
+        //     InterlockedAdd(directionCount[t2.v1],1);
+
+        //     InterlockedAdd(directions[t2.v2][0], dir_t2_v2.x * 100);
+        //     InterlockedAdd(directions[t2.v2][1], dir_t2_v2.y * 100);
+        //     InterlockedAdd(directions[t2.v2][2], dir_t2_v2.z * 100);
+        //     InterlockedAdd(directionCount[t2.v2],1);
+        // }
     }
 }

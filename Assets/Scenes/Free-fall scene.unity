@@ -307,8 +307,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 166510487}
   m_LocalRotation: {x: -0.7071068, y: -0, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: 10.4, z: 25}
-  m_LocalScale: {x: 50, y: 0.10000001, z: 25}
+  m_LocalPosition: {x: 0, y: 35, z: 25}
+  m_LocalScale: {x: 50, y: 0.10000001, z: 70}
   m_Children: []
   m_Father: {fileID: 317725965}
   m_RootOrder: 1
@@ -520,7 +520,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 788422558}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -2.1, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1000, y: 0.1, z: 1000}
   m_Children: []
   m_Father: {fileID: 0}
@@ -615,8 +615,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1094292332}
   m_LocalRotation: {x: 0.5, y: -0.5, z: 0.5, w: 0.5}
-  m_LocalPosition: {x: -25, y: 10.4, z: 0}
-  m_LocalScale: {x: 50, y: 0.1, z: 25}
+  m_LocalPosition: {x: -25, y: 35, z: 0}
+  m_LocalScale: {x: 50, y: 0.1, z: 70}
   m_Children: []
   m_Father: {fileID: 317725965}
   m_RootOrder: 3
@@ -803,8 +803,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1269394635}
   m_LocalRotation: {x: 0.5, y: -0.5, z: 0.5, w: 0.5}
-  m_LocalPosition: {x: 25, y: 10.4, z: 0}
-  m_LocalScale: {x: 50, y: 0.1, z: 25}
+  m_LocalPosition: {x: 25, y: 35, z: 0}
+  m_LocalScale: {x: 50, y: 0.1, z: 70}
   m_Children: []
   m_Father: {fileID: 317725965}
   m_RootOrder: 0
@@ -839,18 +839,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   model: 0
-  numberOfObjects: 40
-  invMass: 1
-  dt: 0.002
+  numberOfObjects: 20
+  invMass: 0.5
+  dt: 0.03
   gravity: {x: 0, y: -9.81, z: 0}
-  iteration: 5
+  iteration: 50
   convergence_factor: 1
-  stretchStiffness: 10
-  compressStiffness: 10
-  bendingStiffness: 2
-  volumeStiffness: 5
+  stretchStiffness: 1
+  compressStiffness: 1
+  bendingStiffness: 5
+  volumeStiffness: 1
   floor: {fileID: 788422558}
   calculateCollision: 1
+  printLog: 0
   drawFPS: 0
   renderVolumeText: 0
   Text: 
@@ -970,8 +971,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1740453919}
   m_LocalRotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: 10.4, z: -25}
-  m_LocalScale: {x: 50, y: 0.10000001, z: 25}
+  m_LocalPosition: {x: 0, y: 35, z: -25}
+  m_LocalScale: {x: 50, y: 0.10000001, z: 70}
   m_Children: []
   m_Father: {fileID: 317725965}
   m_RootOrder: 2

@@ -96,13 +96,12 @@ void applyExplicitEulerKernel(uint3 i : SV_DispatchThreadID)
     if (i.x >= nodeCount) return;
     //add force to velocity
     float3 g = float3(0.0f, -9.81f, 0.0f);
-    float3 velocity = Velocities[i.x] + g * invMass * dt;
+    float3 velocity = Velocities[i.x] * 0.9;
+    velocity += g * invMass * dt;
     Velocities[i.x] = velocity;
     //#### damp velocity here####
     //explicit euler
     ProjectedPositions[i.x] = Positions[i.x] + velocity * dt;
-
-    
 }
 
 void AtomicAddDelta(int indexIntoDeltaPos, float newDeltaVal, int axis) {
@@ -371,31 +370,31 @@ void floorCollisionKernel(uint3 i : SV_DispatchThreadID)
     if ((ProjectedPositions[i.x]).y < floorCoordY)
     {
         ProjectedPositions[i.x].y = floorCoordY + 0.015f;
-        Velocities[i.x] *= 0.0;;
+        Velocities[i.x] *= -1.0;
     }
 
     if ((ProjectedPositions[i.x]).x < floorCoordX1)
     {
         ProjectedPositions[i.x].x += 0.015f;
-        Velocities[i.x] *= 0.0;;
+        Velocities[i.x] *= -1.0;
     }
 
     if ((ProjectedPositions[i.x]).x > floorCoordX2)
     {
         ProjectedPositions[i.x].x -= 0.015f;
-        Velocities[i.x] *= 0.0;;
+        Velocities[i.x] *= -1.0;
     }
 
     if ((ProjectedPositions[i.x]).z < floorCoordZ1)
     {
         ProjectedPositions[i.x].z += 0.015f;
-        Velocities[i.x] *= 0.0;;
+        Velocities[i.x] *= -1.0;
     }
 
     if ((ProjectedPositions[i.x]).z > floorCoordZ2)
     {
         ProjectedPositions[i.x].z -= 0.015f;
-        Velocities[i.x] *= 0.0;;
+        Velocities[i.x] *= -1.0;
     }
 }
 

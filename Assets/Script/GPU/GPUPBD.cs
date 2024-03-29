@@ -44,6 +44,7 @@ public class GPUPBD : MonoBehaviour
 
     [Header("Triangle Intersections")]
     public bool calculateCollision = false;
+    public bool printLog = false;
 
     [Header("Label Data")]
     public bool drawFPS;
@@ -292,7 +293,7 @@ public class GPUPBD : MonoBehaviour
         string filePath = Application.dataPath + "/TetGen-Model/";
         LoadTetModel.LoadData(filePath + modelName, gameObject);
 
-        var _Positions = LoadTetModel.positions.ToArray();            
+        var _Positions = LoadTetModel.positions.ToArray();
         var _triangles = LoadTetModel.triangles;
         var _distanceConstraints = LoadTetModel.springs;
         var _triArray = LoadTetModel.triangleArr.ToArray();
@@ -308,54 +309,61 @@ public class GPUPBD : MonoBehaviour
 
         float ranges = 20.0f;
         string data = "";
-        for(int i=0;i<number;i++){
+        for (int i = 0; i < number; i++)
+        {
             int PosOffset = i * LoadTetModel.positions.Count;
             Vector3 Offset = new Vector3(UnityEngine.Random.Range(-ranges, ranges), 5.0f + (i * 7.0f), UnityEngine.Random.Range(-ranges, ranges));
-            for(int j=0;j<LoadTetModel.positions.Count;j++){                
-                Positions[j+PosOffset] = _Positions[j] + Offset;
+            for (int j = 0; j < LoadTetModel.positions.Count; j++)
+            {
+                Positions[j + PosOffset] = _Positions[j] + Offset;
             }
             int TriOffset = i * LoadTetModel.triangles.Count;
-            for(int j=0;j<LoadTetModel.triangles.Count;j++){
+            for (int j = 0; j < LoadTetModel.triangles.Count; j++)
+            {
                 var t = _triangles[j];
-                triangles[j+TriOffset] = new Triangle(t.vertices[0] + PosOffset, t.vertices[1] + PosOffset, t.vertices[2] + PosOffset);
-                data += "["+(j+TriOffset)+"]"+triangles[j+TriOffset].vertices[0] +","+triangles[j+TriOffset].vertices[1]+","+triangles[j+TriOffset].vertices[2] +"\r\n";
+                triangles[j + TriOffset] = new Triangle(t.vertices[0] + PosOffset, t.vertices[1] + PosOffset, t.vertices[2] + PosOffset);
+                data += "[" + (j + TriOffset) + "]" + triangles[j + TriOffset].vertices[0] + "," + triangles[j + TriOffset].vertices[1] + "," + triangles[j + TriOffset].vertices[2] + "\r\n";
             }
             int TriArrOffset = i * LoadTetModel.triangleArr.Count;
-            for(int j=0;j<LoadTetModel.triangleArr.Count;j++){
-                triArray[j+TriArrOffset] = _triArray[j] + PosOffset;
+            for (int j = 0; j < LoadTetModel.triangleArr.Count; j++)
+            {
+                triArray[j + TriArrOffset] = _triArray[j] + PosOffset;
             }
             int TetraOffset = i * LoadTetModel.tetrahedrons.Count;
-            for(int j=0;j<LoadTetModel.tetrahedrons.Count;j++){    
+            for (int j = 0; j < LoadTetModel.tetrahedrons.Count; j++)
+            {
                 Tetrahedron oldTetra = _tetrahedrons[j];
                 Tetrahedron newTetra = new Tetrahedron(
-                    oldTetra.i1 + PosOffset, 
-                    oldTetra.i2 + PosOffset, 
-                    oldTetra.i3 + PosOffset, 
-                    oldTetra.i4 + PosOffset, 
-                    oldTetra.RestVolume);                            
-                tetrahedrons[j+TetraOffset] = newTetra;
+                    oldTetra.i1 + PosOffset,
+                    oldTetra.i2 + PosOffset,
+                    oldTetra.i3 + PosOffset,
+                    oldTetra.i4 + PosOffset,
+                    oldTetra.RestVolume);
+                tetrahedrons[j + TetraOffset] = newTetra;
             }
             int DistConstraintOffset = i * LoadTetModel.springs.Count;
-            for(int j=0;j<LoadTetModel.springs.Count;j++){
+            for (int j = 0; j < LoadTetModel.springs.Count; j++)
+            {
                 Spring oldSpring = _distanceConstraints[j];
                 Spring newSpring = new Spring(
-                    oldSpring.i1 + PosOffset, 
-                    oldSpring.i2 + PosOffset, 
+                    oldSpring.i1 + PosOffset,
+                    oldSpring.i2 + PosOffset,
                     oldSpring.RestLength);
-                distanceConstraints[j+DistConstraintOffset] = newSpring;                                
+                distanceConstraints[j + DistConstraintOffset] = newSpring;
             }
             int bendingOffset = i * LoadTetModel.bendings.Count;
-            for(int j=0;j<LoadTetModel.bendings.Count;j++){
+            for (int j = 0; j < LoadTetModel.bendings.Count; j++)
+            {
                 Bending oldBending = _bendingConstraints[j];
-                Bending newBending = new Bending();                    
+                Bending newBending = new Bending();
                 newBending.index0 = oldBending.index0 + PosOffset;
                 newBending.index1 = oldBending.index1 + PosOffset;
                 newBending.index2 = oldBending.index2 + PosOffset;
                 newBending.index3 = oldBending.index3 + PosOffset;
                 newBending.restAngle = oldBending.restAngle;
-                bendingConstraints[j+bendingOffset] = newBending;
+                bendingConstraints[j + bendingOffset] = newBending;
             }
-        }        
+        }
 
         Debug.Log(data);
 
@@ -465,7 +473,7 @@ public class GPUPBD : MonoBehaviour
 
         MTriangle[] _tris = new MTriangle[triCount];
 
-        for(int i=0;i<triangles.Count;i++)
+        for (int i = 0; i < triangles.Count; i++)
         {
             _tris[i].v0 = triangles[i].vertices[0];
             _tris[i].v1 = triangles[i].vertices[1];
@@ -592,7 +600,7 @@ public class GPUPBD : MonoBehaviour
         computeShaderobj.SetInt("tetCount", tetCount);
         computeShaderobj.SetInt("bendingCount", bendingCount);
         collisionComputeShader.SetInt("triCount", triCount / numberOfObjects);
-        Debug.Log("triCount per each Object : " + triCount / numberOfObjects); 
+        Debug.Log("triCount per each Object : " + triCount / numberOfObjects);
 
         computeShaderobj.SetFloat("dt", dt);
         computeShaderobj.SetFloat("invMass", invMass);
@@ -666,15 +674,15 @@ public class GPUPBD : MonoBehaviour
 
         collisionComputeShader.SetBuffer(computeCollisionHandling, "positions", positionsBuffer);
         collisionComputeShader.SetBuffer(computeCollisionHandling, "velocities", velocitiesBuffer);
-        collisionComputeShader.SetBuffer(computeCollisionHandling, "triangles", triBuffer2);        
-        collisionComputeShader.SetBuffer(computeCollisionHandling, "directions", directionIntBuffer);        
-        collisionComputeShader.SetBuffer(computeCollisionHandling, "directionCount", directionCounterBuffer);        
+        collisionComputeShader.SetBuffer(computeCollisionHandling, "triangles", triBuffer2);
+        collisionComputeShader.SetBuffer(computeCollisionHandling, "directions", directionIntBuffer);
+        collisionComputeShader.SetBuffer(computeCollisionHandling, "directionCount", directionCounterBuffer);
 
         collisionComputeShader.SetBuffer(computeCollisionResponse, "positions", positionsBuffer);
         collisionComputeShader.SetBuffer(computeCollisionResponse, "velocities", velocitiesBuffer);
-        collisionComputeShader.SetBuffer(computeCollisionResponse, "triangles", triBuffer2);        
-        collisionComputeShader.SetBuffer(computeCollisionResponse, "directions", directionIntBuffer);        
-        collisionComputeShader.SetBuffer(computeCollisionResponse, "directionCount", directionCounterBuffer);        
+        collisionComputeShader.SetBuffer(computeCollisionResponse, "triangles", triBuffer2);
+        collisionComputeShader.SetBuffer(computeCollisionResponse, "directions", directionIntBuffer);
+        collisionComputeShader.SetBuffer(computeCollisionResponse, "directionCount", directionCounterBuffer);
     }
 
     void setup()
@@ -684,25 +692,25 @@ public class GPUPBD : MonoBehaviour
         computeShaderobj = Instantiate(computeShader); // to instantiate the compute shader to be use with multiple object
         double lastInterval = Time.realtimeSinceStartup;
         SelectModelName();
-        Debug.Log("SelectModelName: " + (Time.realtimeSinceStartup-lastInterval));
+        Debug.Log("SelectModelName: " + (Time.realtimeSinceStartup - lastInterval));
         lastInterval = Time.realtimeSinceStartup;
         setupMeshData(numberOfObjects);
-        Debug.Log("setupMeshData: " + (Time.realtimeSinceStartup-lastInterval));
+        Debug.Log("setupMeshData: " + (Time.realtimeSinceStartup - lastInterval));
         lastInterval = Time.realtimeSinceStartup;
         setupShader();
-        Debug.Log("setupShader: " + (Time.realtimeSinceStartup-lastInterval));
+        Debug.Log("setupShader: " + (Time.realtimeSinceStartup - lastInterval));
         lastInterval = Time.realtimeSinceStartup;
         setBuffData();
-        Debug.Log("setBuffData: " + (Time.realtimeSinceStartup-lastInterval));
+        Debug.Log("setBuffData: " + (Time.realtimeSinceStartup - lastInterval));
         lastInterval = Time.realtimeSinceStartup;
         setupComputeBuffer();
-        Debug.Log("setupComputeBuffer: " + (Time.realtimeSinceStartup-lastInterval));
+        Debug.Log("setupComputeBuffer: " + (Time.realtimeSinceStartup - lastInterval));
         lastInterval = Time.realtimeSinceStartup;
         setupKernel();
-        Debug.Log("setupKernel: " + (Time.realtimeSinceStartup-lastInterval));
+        Debug.Log("setupKernel: " + (Time.realtimeSinceStartup - lastInterval));
         lastInterval = Time.realtimeSinceStartup;
         setupComputeShader();
-        Debug.Log("setupComputeShader: " + (Time.realtimeSinceStartup-lastInterval));
+        Debug.Log("setupComputeShader: " + (Time.realtimeSinceStartup - lastInterval));
         lastInterval = Time.realtimeSinceStartup;
 
         totalVolume = computeObjectVolume();
@@ -717,48 +725,33 @@ public class GPUPBD : MonoBehaviour
         ////update uniform data and GPU buffer here
         ////PBD algorithm
         computeShaderobj.Dispatch(applyExplicitEulerKernel, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
-        if(calculateCollision){
-            collisionComputeShader.Dispatch(computeCollisionHandling, (int)Mathf.Ceil(triCount / 32.0f), (int)Mathf.Ceil(triCount / 32.0f), 1);
 
-            if(true){
-                directionIntBuffer.GetData(directionDataGPU);
+        for (int i = 0; i < 1; i++)
+        {
+            if (calculateCollision)
+            {
+                collisionComputeShader.Dispatch(computeCollisionHandling, (int)Mathf.Ceil(triCount / 16.0f), (int)Mathf.Ceil(triCount / 16.0f), 1);
 
-                for(int i=0;i<directionDataGPU.Length;i++){
-                    if(directionDataGPU[i].deltaXInt==0 && directionDataGPU[i].deltaYInt==0 && directionDataGPU[i].deltaZInt==0){ continue;}
-                    //Debug.Log(i+"="+directionDataGPU[i].deltaXInt +"," + directionDataGPU[i].deltaYInt +"," + directionDataGPU[i].deltaZInt);
-                    
-                    // var i1 = directionDataGPU[i].deltaXInt;
-                    // var i2 = directionDataGPU[i].deltaYInt;
+                if (printLog)
+                {
+                    directionIntBuffer.GetData(directionDataGPU);
 
-                    // Debug.Log("i1 : " + i1 + "   i2 : " + i2);
-
-                    // int[] tris = new int[triCount * 3];
-                    // positionsBuffer.GetData(Positions);
-                    // triangleBuffer.GetData(tris);
-
-                    // //Debug.Log("v1 :"+Positions[i1] + ", v2 : " + Positions[i2]);
-                    // Debug.Log(tris[i1 * 3 + 0] + "," + tris[i1 * 3 + 1] + "," + tris[i1 * 3 + 2]);
-                    // Debug.Log(tris[i2 * 3 + 0] + "," + tris[i2 * 3 + 1] + "," + tris[i2 * 3 + 2]);
-
-                    // Debug.Log(Positions[tris[i1 * 3 + 0]] +"/"+Positions[tris[i1 * 3 + 0]]+"/"+Positions[tris[i1 * 3 + 2]]);
-                    // Debug.Log(Positions[tris[i2 * 3 + 0]] +"/"+Positions[tris[i2 * 3 + 0]]+"/"+Positions[tris[i2 * 3 + 2]]);
-                    
-
-
+                    for (int j = 0; j < directionDataGPU.Length; j++)
+                    {
+                        if (directionDataGPU[j].deltaXInt == 0 && directionDataGPU[j].deltaYInt == 0 && directionDataGPU[j].deltaZInt == 0) { continue; }
+                        Debug.Log(j + "=" + directionDataGPU[j].deltaXInt + "," + directionDataGPU[j].deltaYInt + "," + directionDataGPU[j].deltaZInt);
+                    }
                 }
 
-                // positionsBuffer.GetData(Positions);
-                // foreach(var pos in Positions)
-                // {
-                //     Debug.Log(pos);
-                // }
+                collisionComputeShader.Dispatch(computeCollisionResponse, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
             }
-
-            collisionComputeShader.Dispatch(computeCollisionResponse, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
         }
+
         ////damp velocity() here
         for (int i = 0; i < iteration; i++)
         {
+
+
             //solving constraint using avaerage jacobi style
             //convergence rate slower that Gauss–Seidel method implement on CPU method
             computeShaderobj.Dispatch(satisfyDistanceConstraintKernel, (int)Mathf.Ceil(springCount / 1024.0f), 1, 1);
@@ -794,7 +787,7 @@ public class GPUPBD : MonoBehaviour
     }
     void Update()
     {
-        
+
         dispatchComputeShader();
         renderObject();
 
@@ -875,7 +868,8 @@ public class GPUPBD : MonoBehaviour
             GUI.Label(rect, text, style);
         }
 
-        if(true){
+        if (true)
+        {
             float fps = 1.0f / Time.deltaTime;
             float ms = Time.deltaTime * 1000.0f;
             string text = string.Format("{0:N1} FPS ({1:N1}ms)", fps, ms);
