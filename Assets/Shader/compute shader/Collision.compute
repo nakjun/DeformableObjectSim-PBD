@@ -323,7 +323,11 @@ void CollisionResponse (uint3 id : SV_DispatchThreadID)
     {
         dr = float3(directions[i][0]/100.0,directions[i][1]/100.0,directions[i][2]/100.0);
         dr = dr / directionCount[i];
+        dr.y = (-9.8 * 0.002);
+
+        //dr = Reflect(dr, normalize(velocities[i]));
     }
+    //dr = normalize(dr);
     ProjectedPositions[i] += dr * convergence_factor;
     
     directions[i][0] = int(0);
@@ -412,6 +416,7 @@ void CollisionHandling (uint3 id : SV_DispatchThreadID)
             {
                 float s = dot(positions[t1.v0] - collisionCenter, normT2);                
                 float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT2;
+                //dir = Reflect(dir, velocities[t1.v0]);
 
                 InterlockedAdd(directions[t1.v0][0], dir.x * 100);
                 InterlockedAdd(directions[t1.v0][1], dir.y * 100);
@@ -423,6 +428,7 @@ void CollisionHandling (uint3 id : SV_DispatchThreadID)
             {
                 float s = dot(positions[t1.v1] - collisionCenter, normT2);                
                 float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT2;
+                //dir = Reflect(dir, velocities[t1.v1]);
 
                 InterlockedAdd(directions[t1.v1][0], dir.x * 100);
                 InterlockedAdd(directions[t1.v1][1], dir.y * 100);
@@ -433,6 +439,8 @@ void CollisionHandling (uint3 id : SV_DispatchThreadID)
             {   
                 float s = dot(positions[t1.v2] - collisionCenter, normT2);                
                 float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT2;
+                //dir = Reflect(dir, velocities[t1.v2]);
+
                 InterlockedAdd(directions[t1.v2][0], dir.x * 100);
                 InterlockedAdd(directions[t1.v2][1], dir.y * 100);
                 InterlockedAdd(directions[t1.v2][2], dir.z * 100);
@@ -446,6 +454,7 @@ void CollisionHandling (uint3 id : SV_DispatchThreadID)
             {
                 float s = dot(positions[t2.v0] - collisionCenter, normT1);                
                 float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT1;
+                //dir = Reflect(dir, velocities[t2.v0]);
                 InterlockedAdd(directions[t2.v0][0], dir.x * 100);
                 InterlockedAdd(directions[t2.v0][1], dir.y * 100);
                 InterlockedAdd(directions[t2.v0][2], dir.z * 100);
@@ -456,6 +465,7 @@ void CollisionHandling (uint3 id : SV_DispatchThreadID)
             {
                 float s = dot(positions[t2.v1] - collisionCenter, normT1);                
                 float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT1;
+                //dir = Reflect(dir, velocities[t2.v1]);
                 InterlockedAdd(directions[t2.v1][0], dir.x * 100);
                 InterlockedAdd(directions[t2.v1][1], dir.y * 100);
                 InterlockedAdd(directions[t2.v1][2], dir.z * 100);
@@ -465,6 +475,7 @@ void CollisionHandling (uint3 id : SV_DispatchThreadID)
             {
                 float s = dot(positions[t2.v2] - collisionCenter, normT1);                
                 float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT1;
+                //dir = Reflect(dir, velocities[t2.v2]);
                 InterlockedAdd(directions[t2.v2][0], dir.x * 100);
                 InterlockedAdd(directions[t2.v2][1], dir.y * 100);
                 InterlockedAdd(directions[t2.v2][2], dir.z * 100);
