@@ -315,7 +315,7 @@ public class GPUPBD : MonoBehaviour
         for (int i = 0; i < number; i++)
         {
             int PosOffset = i * LoadTetModel.positions.Count;
-            Vector3 Offset = new Vector3(UnityEngine.Random.Range(-ranges, ranges), 5.0f + (i * 7.0f), UnityEngine.Random.Range(-ranges, ranges));
+            Vector3 Offset = new Vector3(UnityEngine.Random.Range(-ranges, ranges), 5.0f + (i * 15.0f), UnityEngine.Random.Range(-ranges, ranges));
             //Vector3 Offset = new Vector3(1.0f, 5.0f + (i * 7.0f), 0.0f);
             for (int j = 0; j < LoadTetModel.positions.Count; j++)
             {
@@ -750,7 +750,6 @@ public class GPUPBD : MonoBehaviour
     {
         ////update uniform data and GPU buffer here
         ////PBD algorithm
-        computeShaderobj.Dispatch(applyExplicitEulerKernel, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
 
         ////damp velocity() here
         for (int i = 0; i < iteration; i++)
@@ -778,6 +777,7 @@ public class GPUPBD : MonoBehaviour
         }
         computeShaderobj.Dispatch(floorCollisionKernel, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
         computeShaderobj.Dispatch(updatePositionsKernel, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
+        computeShaderobj.Dispatch(applyExplicitEulerKernel, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
 
         //compute object volume
         if (renderVolumeText)
