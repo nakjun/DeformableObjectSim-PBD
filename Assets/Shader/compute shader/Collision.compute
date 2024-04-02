@@ -178,21 +178,6 @@ collisionResult CheckEdgeCollision(float3 vertex1, float3 vertex2, Tri t)
     return Intersect(t, edge);
 }
 
-// bool Detection(Tri t1, Tri t2)
-// {
-//     bool c1 = 
-//     CheckEdgeCollision(t1.vertex0, t1.vertex1, t2) || 
-//     CheckEdgeCollision(t1.vertex0, t1.vertex2, t2) || 
-//     CheckEdgeCollision(t1.vertex1, t1.vertex2, t2);
-
-//     bool c2 = 
-//     CheckEdgeCollision(t2.vertex0, t2.vertex1, t1) || 
-//     CheckEdgeCollision(t2.vertex0, t2.vertex2, t1) || 
-//     CheckEdgeCollision(t2.vertex1, t2.vertex2, t1);
-
-//     return c1 && c2;
-// }
-
 int3 calculateSpace(float3 position) {
     return int3((position.x + 50.0) / 0.5, (position.y + 50.0) / 0.5, (position.z + 50.0) / 0.5);
 }
@@ -314,12 +299,6 @@ void CollisionNodeTriangle (uint3 id : SV_DispatchThreadID)
             InterlockedAdd(directions[i][0], diff.x * 100);
             InterlockedAdd(directions[i][1], diff.y * 100);
             InterlockedAdd(directions[i][2], diff.z * 100);
-
-            // InterlockedAdd(directionCount[i],1);
-            
-            // directions[i][0] = int(result.hitPoint.x * 100);
-            // directions[i][1] = int(result.hitPoint.y * 100);
-            // directions[i][2] = int(result.hitPoint.z * 100);
         }
     }
 }
@@ -335,8 +314,8 @@ void CollisionResponse (uint3 id : SV_DispatchThreadID)
         dr = float3(directions[i][0]/100.0,directions[i][1]/100.0,directions[i][2]/100.0);
         dr = dr / directionCount[i];
     }
-    //dr = normalize(dr);
-    ProjectedPositions[i] += (dr * 60.0) * convergence_factor;
+    
+    ProjectedPositions[i] += (-dr * 0.3) *  convergence_factor;
     
     directions[i][0] = int(0);
     directions[i][1] = int(0);
@@ -383,8 +362,7 @@ void CollisionHandling (uint3 id : SV_DispatchThreadID)
 
         bool c1 = (results[0].isCollide || results[1].isCollide || results[2].isCollide);
         bool c2 = (results[3].isCollide || results[4].isCollide || results[5].isCollide);        
-
-        //InterlockedAdd(directions[t1.v0][0], -1);
+        
         if(c1&&c2)
         {
             float3 centerT1 = (t1Vertices.vertex0+t1Vertices.vertex1+t1Vertices.vertex2) / 3.0;
@@ -395,141 +373,63 @@ void CollisionHandling (uint3 id : SV_DispatchThreadID)
 
             float kCollisionConstraintStiffnessIterInd = 0.5;            
 
-            // if(results[0].isCollide)
-            // {
-            //     float s = dot(ProjectedPositions[t1.v0] - results[0].hitPoint, normT2);
-            //     float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT2;
-            //     InterlockedAdd(directions[t1.v0][0], int(dir.x * 100));
-            //     InterlockedAdd(directions[t1.v0][1], int(dir.y * 100));
-            //     InterlockedAdd(directions[t1.v0][2], int(dir.z * 100));
-            //     InterlockedAdd(directionCount[t1.v0],1);
-            // }
-            // if(results[1].isCollide)
-            // {
-            //     float s = dot(ProjectedPositions[t1.v1] - results[1].hitPoint, normT2);
-            //     float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT2;
-            //     InterlockedAdd(directions[t1.v1][0], int(dir.x * 100));
-            //     InterlockedAdd(directions[t1.v1][1], int(dir.y * 100));
-            //     InterlockedAdd(directions[t1.v1][2], int(dir.z * 100));
-            //     InterlockedAdd(directionCount[t1.v1],1);
-            // }
-            // if(results[2].isCollide)
-            // {
-            //     float s = dot(ProjectedPositions[t1.v2] - results[2].hitPoint, normT2);
-            //     float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT2;
-            //     InterlockedAdd(directions[t1.v2][0], int(dir.x * 100));
-            //     InterlockedAdd(directions[t1.v2][1], int(dir.y * 100));
-            //     InterlockedAdd(directions[t1.v2][2], int(dir.z * 100));
-            //     InterlockedAdd(directionCount[t1.v2],1);
-            // }
-            // if(results[3].isCollide)
-            // {
-            //     float s = dot(ProjectedPositions[t2.v0] - results[3].hitPoint, normT1);
-            //     float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT1;
-            //     InterlockedAdd(directions[t2.v0][0], int(dir.x * 100));
-            //     InterlockedAdd(directions[t2.v0][1], int(dir.y * 100));
-            //     InterlockedAdd(directions[t2.v0][2], int(dir.z * 100));
-            //     InterlockedAdd(directionCount[t2.v0],1);
-            // }
-            // if(results[4].isCollide)
-            // {
-            //     float s = dot(ProjectedPositions[t2.v1] - results[4].hitPoint, normT1);
-            //     float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT1;
-            //     InterlockedAdd(directions[t2.v1][0], int(dir.x * 100));
-            //     InterlockedAdd(directions[t2.v1][1], int(dir.y * 100));
-            //     InterlockedAdd(directions[t2.v1][2], int(dir.z * 100));
-            //     InterlockedAdd(directionCount[t2.v1],1);
-            // }
-            // if(results[5].isCollide)
-            // {
-            //     float s = dot(ProjectedPositions[t2.v2] - results[5].hitPoint, normT1);
-            //     float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT1;
-            //     InterlockedAdd(directions[t2.v2][0], int(dir.x * 100));
-            //     InterlockedAdd(directions[t2.v2][1], int(dir.y * 100));
-            //     InterlockedAdd(directions[t2.v2][2], int(dir.z * 100));
-            //     InterlockedAdd(directionCount[t2.v2],1);
-            // }
+            float3 avgVel1 = (velocities[t1.v0] + velocities[t1.v1] + velocities[t1.v2]) / 3.0;
+            float3 avgVel2 = (velocities[t2.v0] + velocities[t2.v1] + velocities[t2.v2]) / 3.0;
 
-            //point1
-            if(results[0].isCollide && results[1].isCollide)
             {
-                float3 collisionCenter = (results[0].hitPoint + results[1].hitPoint)/2.0;
-                float s = dot(ProjectedPositions[t1.v0] - collisionCenter, normT2);                
-                //float3 dirAdjustment = CalculateDirectionAdjustment(collisionCenter, ProjectedPositions[t1.v0], normT2);
-                float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT2;
-                //dir = Reflect(dir, normalize(velocities[t1.v0]));
-
-                InterlockedAdd(directions[t1.v0][0], int(dir.x * 100));
-                InterlockedAdd(directions[t1.v0][1], int(dir.y * 100));
-                InterlockedAdd(directions[t1.v0][2], int(dir.z * 100));
+                float3 relVel = avgVel2 - velocities[t1.v0]; 
+                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t1.v0], normT1, relVel, t1.v0, 1.0, 0.001));
+    
+                InterlockedAdd(directions[t1.v0][0], int(responseVelocity.x * 100));
+                InterlockedAdd(directions[t1.v0][1], int(responseVelocity.y * 100));
+                InterlockedAdd(directions[t1.v0][2], int(responseVelocity.z * 100));
                 InterlockedAdd(directionCount[t1.v0],1);
             }
-            //point2
-            if(results[0].isCollide && results[2].isCollide)
             {
-                float3 collisionCenter = (results[0].hitPoint + results[2].hitPoint)/2.0;
-                float s = dot(ProjectedPositions[t1.v1] - collisionCenter, normT2);                
-                //float3 dirAdjustment = CalculateDirectionAdjustment(collisionCenter, ProjectedPositions[t1.v1], normT2);
-                float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT2;
-                //dir = Reflect(dir, normalize(velocities[t1.v1]));
-
-                InterlockedAdd(directions[t1.v1][0], int(dir.x * 100));
-                InterlockedAdd(directions[t1.v1][1], int(dir.y * 100));
-                InterlockedAdd(directions[t1.v1][2], int(dir.z * 100));
+                float3 relVel = avgVel2 - velocities[t1.v1]; 
+                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t1.v1], normT1, relVel, t1.v1, 1.0, 0.001));
+    
+                InterlockedAdd(directions[t1.v1][0], int(responseVelocity.x * 100));
+                InterlockedAdd(directions[t1.v1][1], int(responseVelocity.y * 100));
+                InterlockedAdd(directions[t1.v1][2], int(responseVelocity.z * 100));
                 InterlockedAdd(directionCount[t1.v1],1);
             }
-            if(results[1].isCollide && results[2].isCollide)
-            {   
-                float3 collisionCenter = (results[1].hitPoint + results[2].hitPoint)/2.0;
-                float s = dot(ProjectedPositions[t1.v2] - collisionCenter, normT2);                
-                //float3 dirAdjustment = CalculateDirectionAdjustment(collisionCenter, ProjectedPositions[t1.v2], normT2);
-                float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT2;
-                //dir = Reflect(dir, normalize(velocities[t1.v2]));
-
-                InterlockedAdd(directions[t1.v2][0], int(dir.x * 100));
-                InterlockedAdd(directions[t1.v2][1], int(dir.y * 100));
-                InterlockedAdd(directions[t1.v2][2], int(dir.z * 100));
+            {
+                float3 relVel = avgVel2 - velocities[t1.v2]; 
+                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t1.v2], normT1, relVel, t1.v2, 1.0, 0.001));
+    
+                InterlockedAdd(directions[t1.v2][0], int(responseVelocity.x * 100));
+                InterlockedAdd(directions[t1.v2][1], int(responseVelocity.y * 100));
+                InterlockedAdd(directions[t1.v2][2], int(responseVelocity.z * 100));
                 InterlockedAdd(directionCount[t1.v2],1);
             }
-
+            
             //T2
-
-            //point1
-            if(results[3].isCollide && results[4].isCollide)
             {
-                float3 collisionCenter = (results[3].hitPoint + results[4].hitPoint)/2.0;
-                float s = dot(ProjectedPositions[t2.v0] - collisionCenter, normT1);       
-                //float3 dirAdjustment = CalculateDirectionAdjustment(collisionCenter, ProjectedPositions[t2.v0], normT2);         
-                float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT1;
-                //dir = Reflect(dir, normalize(velocities[t2.v0]));
-                InterlockedAdd(directions[t2.v0][0], int(dir.x * 100));
-                InterlockedAdd(directions[t2.v0][1], int(dir.y * 100));
-                InterlockedAdd(directions[t2.v0][2], int(dir.z * 100));
+                float3 relVel = avgVel1 - velocities[t2.v0]; 
+                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t2.v0], normT2, relVel, t2.v0, 1.0, 0.001));
+    
+                InterlockedAdd(directions[t2.v0][0], int(responseVelocity.x * 100));
+                InterlockedAdd(directions[t2.v0][1], int(responseVelocity.y * 100));
+                InterlockedAdd(directions[t2.v0][2], int(responseVelocity.z * 100));
                 InterlockedAdd(directionCount[t2.v0],1);
             }
-            //point2
-            if(results[3].isCollide && results[5].isCollide)
             {
-                float3 collisionCenter = (results[3].hitPoint + results[5].hitPoint)/2.0;
-                float s = dot(ProjectedPositions[t2.v1] - collisionCenter, normT1);                
-                //float3 dirAdjustment = CalculateDirectionAdjustment(collisionCenter, ProjectedPositions[t2.v2], normT2);         
-                float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT1;
-                //dir = Reflect(dir, normalize(velocities[t2.v1]));
-                InterlockedAdd(directions[t2.v1][0], int(dir.x * 100));
-                InterlockedAdd(directions[t2.v1][1], int(dir.y * 100));
-                InterlockedAdd(directions[t2.v1][2], int(dir.z * 100));
+                float3 relVel = avgVel1 - velocities[t2.v1]; 
+                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t2.v1], normT2, relVel, t2.v1, 1.0, 0.001));
+    
+                InterlockedAdd(directions[t2.v1][0], int(responseVelocity.x * 100));
+                InterlockedAdd(directions[t2.v1][1], int(responseVelocity.y * 100));
+                InterlockedAdd(directions[t2.v1][2], int(responseVelocity.z * 100));
                 InterlockedAdd(directionCount[t2.v1],1);
             }
-            if(results[4].isCollide && results[5].isCollide)
             {
-                float3 collisionCenter = (results[4].hitPoint + results[5].hitPoint)/2.0;
-                float s = dot(ProjectedPositions[t2.v2] - collisionCenter, normT1);       
-                //float3 dirAdjustment = CalculateDirectionAdjustment(collisionCenter, ProjectedPositions[t2.v2], normT2);                  
-                float3 dir = -s * kCollisionConstraintStiffnessIterInd *  normT1;
-                //dir = Reflect(dir, normalize(velocities[t2.v2]));
-                InterlockedAdd(directions[t2.v2][0], int(dir.x * 100));
-                InterlockedAdd(directions[t2.v2][1], int(dir.y * 100));
-                InterlockedAdd(directions[t2.v2][2], int(dir.z * 100));
+                float3 relVel = avgVel1 - velocities[t2.v2]; 
+                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t2.v2], normT2, relVel, t2.v2, 1.0, 0.001));
+    
+                InterlockedAdd(directions[t2.v2][0], int(responseVelocity.x * 100));
+                InterlockedAdd(directions[t2.v2][1], int(responseVelocity.y * 100));
+                InterlockedAdd(directions[t2.v2][2], int(responseVelocity.z * 100));
                 InterlockedAdd(directionCount[t2.v2],1);
             }
         }

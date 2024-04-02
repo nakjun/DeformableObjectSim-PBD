@@ -963,12 +963,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   model: 0
-  numberOfObjects: 40
+  numberOfObjects: 20
   invMass: 1
-  dt: 0.01
+  dt: 0.001
   gravity: {x: 0, y: -9.81, z: 0}
-  iteration: 45
-  convergence_factor: 2
+  iteration: 15
+  convergence_factor: 1.5
   stretchStiffness: 1
   compressStiffness: 1
   bendingStiffness: 1

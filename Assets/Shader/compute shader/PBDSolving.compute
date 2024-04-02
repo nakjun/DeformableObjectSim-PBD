@@ -97,9 +97,6 @@ void applyExplicitEulerKernel(uint3 i : SV_DispatchThreadID)
     //add force to velocity
     float3 g = float3(0.0f, -9.81f, 0.0f);
     float3 velocity = Velocities[i.x];
-    // if(velocity.x > 50.0f) velocity.x -= 5.0;
-    // if(velocity.y > 50.0f) velocity.y -= 5.0;
-    // if(velocity.z > 50.0f) velocity.z -= 5.0;
     velocity += g * invMass * dt;
     Velocities[i.x] = velocity;
     //#### damp velocity here####
