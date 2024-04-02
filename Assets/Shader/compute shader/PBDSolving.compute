@@ -96,7 +96,7 @@ void applyExplicitEulerKernel(uint3 i : SV_DispatchThreadID)
     if (i.x >= nodeCount) return;
     //add force to velocity
     float3 g = float3(0.0f, -9.81f, 0.0f);
-    float3 velocity = Velocities[i.x] * 0.9;
+    float3 velocity = Velocities[i.x];
     velocity += g * invMass * dt;
     Velocities[i.x] = velocity;
     //#### damp velocity here####
@@ -224,7 +224,7 @@ void satisfyBendingConstraintKernel(uint3 i : SV_DispatchThreadID)
         n2 = normalize(n2);
 
         float d = dot(n1, n2);
-        d = clamp(d, -1.0f, 1.0f);
+        d = clamp(d, -0.05f, 1.0f);
         float currentAngle = acos(d);
 
         //find lamda ( where deltap = lamda*wi*gradConstraint )
@@ -370,31 +370,31 @@ void floorCollisionKernel(uint3 i : SV_DispatchThreadID)
     if ((ProjectedPositions[i.x]).y < floorCoordY)
     {
         ProjectedPositions[i.x].y = floorCoordY + 0.015f;
-        Velocities[i.x] *= -1.0;
+        Velocities[i.x].y = -0.0;
     }
 
     if ((ProjectedPositions[i.x]).x < floorCoordX1)
     {
         ProjectedPositions[i.x].x += 0.015f;
-        Velocities[i.x] *= -1.0;
+        Velocities[i.x].x *= -0.01;
     }
 
     if ((ProjectedPositions[i.x]).x > floorCoordX2)
     {
         ProjectedPositions[i.x].x -= 0.015f;
-        Velocities[i.x] *= -1.0;
+        Velocities[i.x].x *= -0.01;
     }
 
     if ((ProjectedPositions[i.x]).z < floorCoordZ1)
     {
         ProjectedPositions[i.x].z += 0.015f;
-        Velocities[i.x] *= -1.0;
+        Velocities[i.x].z *= -0.01;
     }
 
     if ((ProjectedPositions[i.x]).z > floorCoordZ2)
     {
         ProjectedPositions[i.x].z -= 0.015f;
-        Velocities[i.x] *= -1.0;
+        Velocities[i.x].z *= -0.01;
     }
 }
 

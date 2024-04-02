@@ -839,15 +839,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   model: 0
-  numberOfObjects: 20
-  invMass: 0.5
-  dt: 0.03
+  numberOfObjects: 30
+  invMass: 1
+  dt: 0.005
   gravity: {x: 0, y: -9.81, z: 0}
-  iteration: 50
-  convergence_factor: 1
+  iteration: 20
+  convergence_factor: 1.5
   stretchStiffness: 1
   compressStiffness: 1
-  bendingStiffness: 5
+  bendingStiffness: 1
   volumeStiffness: 1
   floor: {fileID: 788422558}
   calculateCollision: 1

@@ -7,6 +7,8 @@ using System;
 using System.Linq;
 using Assets.script;
 using UnityEngine.Rendering;
+using UnityEditor;
+
 
 public class GPUPBD : MonoBehaviour
 {
@@ -130,6 +132,7 @@ public class GPUPBD : MonoBehaviour
 
     private int computeCollisionHandling; // for collision detection
     private int computeCollisionResponse; // for collision response
+    private int computeCollisionDetection; // for collision detection2
 
     [Header("Rendering Paramenter")]
     public ComputeShader computeShader;
@@ -313,6 +316,7 @@ public class GPUPBD : MonoBehaviour
         {
             int PosOffset = i * LoadTetModel.positions.Count;
             Vector3 Offset = new Vector3(UnityEngine.Random.Range(-ranges, ranges), 5.0f + (i * 7.0f), UnityEngine.Random.Range(-ranges, ranges));
+            //Vector3 Offset = new Vector3(1.0f, 5.0f + (i * 7.0f), 0.0f);
             for (int j = 0; j < LoadTetModel.positions.Count; j++)
             {
                 Positions[j + PosOffset] = _Positions[j] + Offset;
@@ -590,6 +594,8 @@ public class GPUPBD : MonoBehaviour
 
         computeCollisionResponse = collisionComputeShader.FindKernel("CollisionResponse");
 
+        computeCollisionDetection = collisionComputeShader.FindKernel("CollisionNodeTriangle");
+
     }
     private void setupComputeShader()
     {
@@ -599,8 +605,6 @@ public class GPUPBD : MonoBehaviour
         computeShaderobj.SetInt("triCount", triCount);
         computeShaderobj.SetInt("tetCount", tetCount);
         computeShaderobj.SetInt("bendingCount", bendingCount);
-        collisionComputeShader.SetInt("triCount", triCount / numberOfObjects);
-        Debug.Log("triCount per each Object : " + triCount / numberOfObjects);
 
         computeShaderobj.SetFloat("dt", dt);
         computeShaderobj.SetFloat("invMass", invMass);
@@ -612,6 +616,13 @@ public class GPUPBD : MonoBehaviour
 
         computeShaderobj.SetVector("gravity", gravity);
 
+        collisionComputeShader.SetInt("triCount", triCount / numberOfObjects);
+        collisionComputeShader.SetInt("totalNodeCount", nodeCount);
+        collisionComputeShader.SetInt("nodeCount", nodeCount / numberOfObjects);
+        collisionComputeShader.SetFloat("convergence_factor", convergence_factor);
+        Debug.Log("triCount per each Object : " + triCount / numberOfObjects);
+        Debug.Log("nodeCount per each Object : " + nodeCount / numberOfObjects);
+        Debug.Log("nodeCount total Object : " + nodeCount);
         // bind buffer data to each kernel
 
         //Kernel #1 add force & apply euler
@@ -673,16 +684,31 @@ public class GPUPBD : MonoBehaviour
         computeShaderobj.SetBuffer(computeVerticesNormal, "objVolume", objVolumeBuffer);
 
         collisionComputeShader.SetBuffer(computeCollisionHandling, "positions", positionsBuffer);
+        collisionComputeShader.SetBuffer(computeCollisionHandling, "ProjectedPositions", projectedPositionsBuffer);
         collisionComputeShader.SetBuffer(computeCollisionHandling, "velocities", velocitiesBuffer);
         collisionComputeShader.SetBuffer(computeCollisionHandling, "triangles", triBuffer2);
         collisionComputeShader.SetBuffer(computeCollisionHandling, "directions", directionIntBuffer);
         collisionComputeShader.SetBuffer(computeCollisionHandling, "directionCount", directionCounterBuffer);
 
         collisionComputeShader.SetBuffer(computeCollisionResponse, "positions", positionsBuffer);
+        collisionComputeShader.SetBuffer(computeCollisionResponse, "ProjectedPositions", projectedPositionsBuffer);
         collisionComputeShader.SetBuffer(computeCollisionResponse, "velocities", velocitiesBuffer);
         collisionComputeShader.SetBuffer(computeCollisionResponse, "triangles", triBuffer2);
         collisionComputeShader.SetBuffer(computeCollisionResponse, "directions", directionIntBuffer);
         collisionComputeShader.SetBuffer(computeCollisionResponse, "directionCount", directionCounterBuffer);
+
+        collisionComputeShader.SetBuffer(computeCollisionDetection, "positions", positionsBuffer);
+        collisionComputeShader.SetBuffer(computeCollisionDetection, "ProjectedPositions", projectedPositionsBuffer);
+        collisionComputeShader.SetBuffer(computeCollisionDetection, "velocities", velocitiesBuffer);
+        collisionComputeShader.SetBuffer(computeCollisionDetection, "triangles", triBuffer2);
+        collisionComputeShader.SetBuffer(computeCollisionDetection, "directions", directionIntBuffer);
+        collisionComputeShader.SetBuffer(computeCollisionDetection, "directionCount", directionCounterBuffer);
+
+        computeShaderobj.SetFloat("floorCoordY", (floor.transform.position).y);
+        computeShaderobj.SetFloat("floorCoordX1", -25);
+        computeShaderobj.SetFloat("floorCoordX2", 25);
+        computeShaderobj.SetFloat("floorCoordZ1", -25);
+        computeShaderobj.SetFloat("floorCoordZ2", 25);
     }
 
     void setup()
@@ -726,44 +752,62 @@ public class GPUPBD : MonoBehaviour
         ////PBD algorithm
         computeShaderobj.Dispatch(applyExplicitEulerKernel, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
 
-        for (int i = 0; i < 1; i++)
-        {
-            if (calculateCollision)
-            {
-                collisionComputeShader.Dispatch(computeCollisionHandling, (int)Mathf.Ceil(triCount / 16.0f), (int)Mathf.Ceil(triCount / 16.0f), 1);
+        // for (int i = 0; i < 1; i++)
+        // {
+        //     if (calculateCollision)
+        //     {
+        //         collisionComputeShader.Dispatch(computeCollisionHandling, (int)Mathf.Ceil(triCount / 32.0f), (int)Mathf.Ceil(triCount / 32.0f), 1);
+        //         //collisionComputeShader.Dispatch(computeCollisionDetection, (int)Mathf.Ceil(nodeCount / 32.0f), (int)Mathf.Ceil(triCount / 32.0f), 1);
 
-                if (printLog)
-                {
-                    directionIntBuffer.GetData(directionDataGPU);
+        //         if (printLog)
+        //         {
+        //             directionIntBuffer.GetData(directionDataGPU);
+        //             bool flag = false;
+        //             for (int j = 0; j < directionDataGPU.Length; j++)
+        //             {
+        //                 if (directionDataGPU[j].deltaXInt == 0 && directionDataGPU[j].deltaYInt == 0 && directionDataGPU[j].deltaZInt == 0) { continue; }
+        //                 Debug.Log("direction "+j+"=" + directionDataGPU[j].deltaXInt + "," + directionDataGPU[j].deltaYInt + "," + directionDataGPU[j].deltaZInt);
+                        
+        //                 flag = true;
+        //             }
+        //             if(flag){
+        //                 // positionsBuffer.GetData(Positions);
+        //                 // velocitiesBuffer.GetData(Velocities);
+        //                 // for (int j = 0; j < Positions.Length; j++)
+        //                 // {
+        //                 //     Debug.Log(j + "=" + Positions[j].x + "," + Positions[j].y + "," + Positions[j].z);
+        //                 //     Debug.Log(j + "=" + Velocities[j].x + "," + Velocities[j].y + "," + Velocities[j].z);
+        //                 // }
+                        
+        //                 EditorApplication.isPaused = true;
+        //             }
+        //         }
 
-                    for (int j = 0; j < directionDataGPU.Length; j++)
-                    {
-                        if (directionDataGPU[j].deltaXInt == 0 && directionDataGPU[j].deltaYInt == 0 && directionDataGPU[j].deltaZInt == 0) { continue; }
-                        Debug.Log(j + "=" + directionDataGPU[j].deltaXInt + "," + directionDataGPU[j].deltaYInt + "," + directionDataGPU[j].deltaZInt);
-                    }
-                }
-
-                collisionComputeShader.Dispatch(computeCollisionResponse, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
-            }
-        }
+        //         collisionComputeShader.Dispatch(computeCollisionResponse, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
+        //     }
+        // }
 
         ////damp velocity() here
         for (int i = 0; i < iteration; i++)
         {
-
-
+            collisionComputeShader.Dispatch(computeCollisionHandling, (int)Mathf.Ceil(triCount / 32.0f), (int)Mathf.Ceil(triCount / 32.0f), 1);
+            if (printLog)
+            {
+                directionIntBuffer.GetData(directionDataGPU);                
+                for (int j = 0; j < directionDataGPU.Length; j++)
+                {
+                    if (directionDataGPU[j].deltaXInt == 0 && directionDataGPU[j].deltaYInt == 0 && directionDataGPU[j].deltaZInt == 0) { continue; }
+                    Debug.Log("direction "+j+"=" + directionDataGPU[j].deltaXInt + "," + directionDataGPU[j].deltaYInt + "," + directionDataGPU[j].deltaZInt);                    
+                }
+            }
+            collisionComputeShader.Dispatch(computeCollisionResponse, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
             //solving constraint using avaerage jacobi style
             //convergence rate slower that Gauss–Seidel method implement on CPU method
             computeShaderobj.Dispatch(satisfyDistanceConstraintKernel, (int)Mathf.Ceil(springCount / 1024.0f), 1, 1);
             computeShaderobj.Dispatch(satisfyBendingConstraintKernel, (int)Mathf.Ceil(bendingCount / 1024.0f), 1, 1);
             computeShaderobj.Dispatch(satisfyTetVolConstraintKernel, (int)Mathf.Ceil(tetCount / 1024.0f), 1, 1);
             computeShaderobj.Dispatch(averageConstraintDeltasKernel, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
-
-            computeShaderobj.SetFloat("floorCoordY", (floor.transform.position).y);
-            computeShaderobj.SetFloat("floorCoordX1", -25);
-            computeShaderobj.SetFloat("floorCoordX2", 25);
-            computeShaderobj.SetFloat("floorCoordZ1", -25);
-            computeShaderobj.SetFloat("floorCoordZ2", 25);
+            
             computeShaderobj.Dispatch(floorCollisionKernel, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
         }
         computeShaderobj.Dispatch(updatePositionsKernel, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
@@ -772,7 +816,7 @@ public class GPUPBD : MonoBehaviour
         if (renderVolumeText)
         {
             computeShaderobj.Dispatch(computeObjVolumeKernel, (int)Mathf.Ceil(tetCount / 1024.0f), 1, 1);
-            objVolumeBuffer.GetData(volumeDataGPU);
+            //objVolumeBuffer.GetData(volumeDataGPU);
         }
         //compute normal for rendering
         computeShaderobj.Dispatch(computeVerticesNormal, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
