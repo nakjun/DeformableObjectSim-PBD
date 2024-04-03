@@ -369,27 +369,27 @@ void floorCollisionKernel(uint3 i : SV_DispatchThreadID)
    
     if ((ProjectedPositions[i.x]).y < floorCoordY)
     {
-        ProjectedPositions[i.x].y = floorCoordY + 0.015f;
+        ProjectedPositions[i.x].y = floorCoordY + 0.001f;
     }
 
     if ((ProjectedPositions[i.x]).x < floorCoordX1)
     {
-        ProjectedPositions[i.x].x = floorCoordX1 + 0.015f;
+        ProjectedPositions[i.x].x = floorCoordX1 + 0.001f;
     }
 
     if ((ProjectedPositions[i.x]).x > floorCoordX2)
     {
-        ProjectedPositions[i.x].x = floorCoordX2 - 0.015f;
+        ProjectedPositions[i.x].x = floorCoordX2 - 0.001f;
     }
 
     if ((ProjectedPositions[i.x]).z < floorCoordZ1)
     {
-        ProjectedPositions[i.x].z = floorCoordZ1 + 0.015f;
+        ProjectedPositions[i.x].z = floorCoordZ1 + 0.001f;
     }
 
     if ((ProjectedPositions[i.x]).z > floorCoordZ2)
     {
-        ProjectedPositions[i.x].z = floorCoordZ2 - 0.015f;
+        ProjectedPositions[i.x].z = floorCoordZ2 - 0.001f;
     }
 }
 

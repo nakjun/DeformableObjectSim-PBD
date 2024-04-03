@@ -523,7 +523,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 80
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -549,7 +549,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 473582980}
   m_LocalRotation: {x: 0.32345074, y: 0.18280876, z: -0.063839674, w: 0.92622083}
-  m_LocalPosition: {x: -22.36, y: 30.8, z: -37.6}
+  m_LocalPosition: {x: -13.4, y: 31, z: -23.9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -773,8 +773,8 @@ Light:
   serializedVersion: 10
   m_Type: 1
   m_Shape: 0
-  m_Color: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
-  m_Intensity: 1
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Intensity: 1.1
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -784,9 +784,9 @@ Light:
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
-    m_Bias: 0.05
-    m_NormalBias: 0.4
-    m_NearPlane: 0.2
+    m_Bias: 0
+    m_NormalBias: 0
+    m_NearPlane: 0.1
     m_CullingMatrixOverride:
       e00: 1
       e01: 0
@@ -816,7 +816,7 @@ Light:
   m_Lightmapping: 4
   m_LightShadowCasterMode: 0
   m_AreaSize: {x: 1, y: 1}
-  m_BounceIntensity: 1
+  m_BounceIntensity: 4
   m_ColorTemperature: 6570
   m_UseColorTemperature: 0
   m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
@@ -962,12 +962,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2f34aec4ad4f99e41b05deaa669bcf36, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  model: 0
-  numberOfObjects: 20
+  model: 1
+  numberOfObjects: 5
   invMass: 1
   dt: 0.001
   gravity: {x: 0, y: -9.81, z: 0}
-  iteration: 15
+  iteration: 10
   convergence_factor: 1.5
   stretchStiffness: 1
   compressStiffness: 1
@@ -1001,7 +1001,7 @@ Transform:
   m_GameObject: {fileID: 1468730765}
   m_LocalRotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 3, y: 15, z: 0}
-  m_LocalScale: {x: 4, y: 4, z: 4}
+  m_LocalScale: {x: 5, y: 5, z: 5}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 3
