@@ -236,14 +236,14 @@ float CalculateDirectionAdjustment(float3 collisionPoint, float3 objectPosition,
 }
 
 
-float3 TrianglePointResponse(float3 vel, float3 normal, float3 relVel, int nodeIndex, float tolerance, float timeStep) {
+float3 TrianglePointResponse(float3 vel, float3 normal, float3 relVel, float tolerance, float timeStep) {
     
     float3 normalComponent = normal * dot(normal, relVel); // 정규 성분 계산
 
     float3 tangentialComponent = vel - normalComponent; // 접선 성분 계산
     float3 response = tangentialComponent - normalComponent; // 반응 계산 (사용되지 않음)
 
-    // 비탄성 충돌 반발
+    // 비탄성 충돌 적용
     float vn = length(normalComponent); // 정규 성분의 크기
     normalComponent = normalize(normalComponent); // 정규 성분 정규화
 
@@ -315,7 +315,7 @@ void CollisionResponse (uint3 id : SV_DispatchThreadID)
         dr = dr / directionCount[i];
     }
     
-    ProjectedPositions[i] += (-dr * 0.15) *  convergence_factor;
+    ProjectedPositions[i] += (-dr * 0.05) *  convergence_factor;
     
     directions[i][0] = int(0);
     directions[i][1] = int(0);
@@ -334,6 +334,7 @@ void CollisionHandling (uint3 id : SV_DispatchThreadID)
     int objIndex2 = floor(float(j) / triCount);
 
     if(objIndex1 != objIndex2 && objIndex1 <= objIndex2)
+    //if(objIndex1 <= objIndex2)
     {
         Triangle t1 = triangles[i];
         Triangle t2 = triangles[j];
@@ -378,7 +379,7 @@ void CollisionHandling (uint3 id : SV_DispatchThreadID)
 
             {
                 float3 relVel = avgVel2 - velocities[t1.v0]; 
-                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t1.v0], normT1, relVel, t1.v0, 1.0, 0.001));
+                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t1.v0], normT1, relVel, 1.0, 0.001));
     
                 InterlockedAdd(directions[t1.v0][0], int(responseVelocity.x * 100));
                 InterlockedAdd(directions[t1.v0][1], int(responseVelocity.y * 100));
@@ -387,7 +388,7 @@ void CollisionHandling (uint3 id : SV_DispatchThreadID)
             }
             {
                 float3 relVel = avgVel2 - velocities[t1.v1]; 
-                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t1.v1], normT1, relVel, t1.v1, 1.0, 0.001));
+                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t1.v1], normT1, relVel, 1.0, 0.001));
     
                 InterlockedAdd(directions[t1.v1][0], int(responseVelocity.x * 100));
                 InterlockedAdd(directions[t1.v1][1], int(responseVelocity.y * 100));
@@ -396,7 +397,7 @@ void CollisionHandling (uint3 id : SV_DispatchThreadID)
             }
             {
                 float3 relVel = avgVel2 - velocities[t1.v2]; 
-                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t1.v2], normT1, relVel, t1.v2, 1.0, 0.001));
+                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t1.v2], normT1, relVel, 1.0, 0.001));
     
                 InterlockedAdd(directions[t1.v2][0], int(responseVelocity.x * 100));
                 InterlockedAdd(directions[t1.v2][1], int(responseVelocity.y * 100));
@@ -407,7 +408,7 @@ void CollisionHandling (uint3 id : SV_DispatchThreadID)
             //T2
             {
                 float3 relVel = avgVel1 - velocities[t2.v0]; 
-                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t2.v0], normT2, relVel, t2.v0, 1.0, 0.001));
+                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t2.v0], normT2, relVel, 1.0, 0.001));
     
                 InterlockedAdd(directions[t2.v0][0], int(responseVelocity.x * 100));
                 InterlockedAdd(directions[t2.v0][1], int(responseVelocity.y * 100));
@@ -416,7 +417,7 @@ void CollisionHandling (uint3 id : SV_DispatchThreadID)
             }
             {
                 float3 relVel = avgVel1 - velocities[t2.v1]; 
-                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t2.v1], normT2, relVel, t2.v1, 1.0, 0.001));
+                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t2.v1], normT2, relVel, 1.0, 0.001));
     
                 InterlockedAdd(directions[t2.v1][0], int(responseVelocity.x * 100));
                 InterlockedAdd(directions[t2.v1][1], int(responseVelocity.y * 100));
@@ -425,7 +426,7 @@ void CollisionHandling (uint3 id : SV_DispatchThreadID)
             }
             {
                 float3 relVel = avgVel1 - velocities[t2.v2]; 
-                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t2.v2], normT2, relVel, t2.v2, 1.0, 0.001));
+                float3 responseVelocity = normalize(TrianglePointResponse(velocities[t2.v2], normT2, relVel, 1.0, 0.001));
     
                 InterlockedAdd(directions[t2.v2][0], int(responseVelocity.x * 100));
                 InterlockedAdd(directions[t2.v2][1], int(responseVelocity.y * 100));

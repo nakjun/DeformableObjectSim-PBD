@@ -292,9 +292,12 @@ public class GPUPBD : MonoBehaviour
 
     void setupMeshData(int number)
     {
+        double lastInterval = Time.realtimeSinceStartup;
         //print(Application.dataPath);
         string filePath = Application.dataPath + "/TetGen-Model/";
         LoadTetModel.LoadData(filePath + modelName, gameObject);
+        Debug.Log("LoadData: " + (Time.realtimeSinceStartup - lastInterval));
+        lastInterval = Time.realtimeSinceStartup;
 
         var _Positions = LoadTetModel.positions.ToArray();
         var _triangles = LoadTetModel.triangles;
@@ -325,8 +328,7 @@ public class GPUPBD : MonoBehaviour
             for (int j = 0; j < LoadTetModel.triangles.Count; j++)
             {
                 var t = _triangles[j];
-                triangles[j + TriOffset] = new Triangle(t.vertices[0] + PosOffset, t.vertices[1] + PosOffset, t.vertices[2] + PosOffset);
-                data += "[" + (j + TriOffset) + "]" + triangles[j + TriOffset].vertices[0] + "," + triangles[j + TriOffset].vertices[1] + "," + triangles[j + TriOffset].vertices[2] + "\r\n";
+                triangles[j + TriOffset] = new Triangle(t.vertices[0] + PosOffset, t.vertices[1] + PosOffset, t.vertices[2] + PosOffset);                
             }
             int TriArrOffset = i * LoadTetModel.triangleArr.Count;
             for (int j = 0; j < LoadTetModel.triangleArr.Count; j++)
@@ -356,10 +358,10 @@ public class GPUPBD : MonoBehaviour
                 distanceConstraints[j + DistConstraintOffset] = newSpring;
             }
             int bendingOffset = i * LoadTetModel.bendings.Count;
+            Bending newBending = new Bending();
             for (int j = 0; j < LoadTetModel.bendings.Count; j++)
             {
                 Bending oldBending = _bendingConstraints[j];
-                Bending newBending = new Bending();
                 newBending.index0 = oldBending.index0 + PosOffset;
                 newBending.index1 = oldBending.index1 + PosOffset;
                 newBending.index2 = oldBending.index2 + PosOffset;
@@ -367,9 +369,9 @@ public class GPUPBD : MonoBehaviour
                 newBending.restAngle = oldBending.restAngle;
                 bendingConstraints[j + bendingOffset] = newBending;
             }
+            Debug.Log(i + " : " + (Time.realtimeSinceStartup - lastInterval));
+            lastInterval = Time.realtimeSinceStartup;
         }
-
-        Debug.Log(data);
 
         nodeCount = Positions.Length;
         springCount = distanceConstraints.Count;
