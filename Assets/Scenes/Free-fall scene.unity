@@ -965,16 +965,16 @@ MonoBehaviour:
   model: 1
   numberOfObjects: 20
   invMass: 1
-  dt: 0.003
+  dt: 0.005
   gravity: {x: 0, y: -9.81, z: 0}
   iteration: 20
   convergence_factor: 1.5
   stretchStiffness: 1
   compressStiffness: 1
   bendingStiffness: 1
-  volumeStiffness: 1
+  volumeStiffness: 30
   floor: {fileID: 788422558}
-  calculateCollision: 0
+  calculateCollision: 1
   printLog: 0
   drawFPS: 0
   renderVolumeText: 0
@@ -1001,7 +1001,7 @@ Transform:
   m_GameObject: {fileID: 1468730765}
   m_LocalRotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 3, y: 15, z: 0}
-  m_LocalScale: {x: 2, y: 2, z: 2}
+  m_LocalScale: {x: 8, y: 8, z: 8}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 3

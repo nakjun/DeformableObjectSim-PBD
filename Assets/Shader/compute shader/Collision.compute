@@ -315,7 +315,7 @@ void CollisionResponse (uint3 id : SV_DispatchThreadID)
         dr = dr / directionCount[i];
     }
     
-    ProjectedPositions[i] += (-dr * 0.05) *  convergence_factor;
+    ProjectedPositions[i] += (-dr * 0.5) *  convergence_factor;
     
     directions[i][0] = int(0);
     directions[i][1] = int(0);
