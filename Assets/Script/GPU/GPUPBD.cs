@@ -161,6 +161,12 @@ public class GPUPBD : MonoBehaviour
     [HideInInspector]
     List<string[]> tableData = new List<string[]>();
 
+    bool print_delta_log = false;
+
+    private double startTime;
+    private double fps = 0;
+
+    List<double> elapsedTime = new List<double>();
 
     void SelectModelName()
     {
@@ -294,6 +300,7 @@ public class GPUPBD : MonoBehaviour
     {
         double lastInterval = Time.realtimeSinceStartup;
         //print(Application.dataPath);
+        print(Application.dataPath);
         string filePath = Application.dataPath + "/TetGen-Model/";
         LoadTetModel.LoadData(filePath + modelName, gameObject);
         Debug.Log("LoadData: " + (Time.realtimeSinceStartup - lastInterval));
@@ -318,6 +325,7 @@ public class GPUPBD : MonoBehaviour
         for (int i = 0; i < number; i++)
         {
             int PosOffset = i * LoadTetModel.positions.Count;
+            //Vector3 Offset = Vector3.zero;
             Vector3 Offset = new Vector3(UnityEngine.Random.Range(-ranges, ranges), 5.0f + (i * 15.0f), UnityEngine.Random.Range(-ranges, ranges));
             //Vector3 Offset = new Vector3(1.0f, 5.0f + (i * 7.0f), 0.0f);
             for (int j = 0; j < LoadTetModel.positions.Count; j++)
@@ -624,7 +632,7 @@ public class GPUPBD : MonoBehaviour
         collisionComputeShader.SetFloat("convergence_factor", convergence_factor);
         Debug.Log("triCount per each Object : " + triCount / numberOfObjects);
         Debug.Log("nodeCount per each Object : " + nodeCount / numberOfObjects);
-        Debug.Log("nodeCount total Object : " + nodeCount);
+        Debug.Log("tetraCount per each Object : " + tetCount / numberOfObjects);        
         // bind buffer data to each kernel
 
         //Kernel #1 add force & apply euler
@@ -713,6 +721,14 @@ public class GPUPBD : MonoBehaviour
         computeShaderobj.SetFloat("floorCoordZ2", 25);
     }
 
+    void printDeltaTimeLog(string logtitle, double t1, double t2)
+    {
+        if(print_delta_log)
+        {
+            Debug.Log(logtitle + (t1 - t2));
+        }
+    }
+
     void setup()
     {
         material = new Material(renderingShader); // new material for difference object
@@ -720,25 +736,25 @@ public class GPUPBD : MonoBehaviour
         computeShaderobj = Instantiate(computeShader); // to instantiate the compute shader to be use with multiple object
         double lastInterval = Time.realtimeSinceStartup;
         SelectModelName();
-        Debug.Log("SelectModelName: " + (Time.realtimeSinceStartup - lastInterval));
+        printDeltaTimeLog("SelectModelName: ", Time.realtimeSinceStartup, lastInterval);        
         lastInterval = Time.realtimeSinceStartup;
         setupMeshData(numberOfObjects);
-        Debug.Log("setupMeshData: " + (Time.realtimeSinceStartup - lastInterval));
+        printDeltaTimeLog("setupMeshData: ", Time.realtimeSinceStartup, lastInterval);
         lastInterval = Time.realtimeSinceStartup;
         setupShader();
-        Debug.Log("setupShader: " + (Time.realtimeSinceStartup - lastInterval));
+        printDeltaTimeLog("setupShader: ", Time.realtimeSinceStartup, lastInterval);
         lastInterval = Time.realtimeSinceStartup;
         setBuffData();
-        Debug.Log("setBuffData: " + (Time.realtimeSinceStartup - lastInterval));
+        printDeltaTimeLog("setBuffData: ", Time.realtimeSinceStartup, lastInterval);
         lastInterval = Time.realtimeSinceStartup;
         setupComputeBuffer();
-        Debug.Log("setupComputeBuffer: " + (Time.realtimeSinceStartup - lastInterval));
+        printDeltaTimeLog("setupComputeBuffer: ", Time.realtimeSinceStartup, lastInterval);
         lastInterval = Time.realtimeSinceStartup;
         setupKernel();
-        Debug.Log("setupKernel: " + (Time.realtimeSinceStartup - lastInterval));
+        printDeltaTimeLog("setupKernel: ", Time.realtimeSinceStartup, lastInterval);
         lastInterval = Time.realtimeSinceStartup;
         setupComputeShader();
-        Debug.Log("setupComputeShader: " + (Time.realtimeSinceStartup - lastInterval));
+        printDeltaTimeLog("setupComputeShader: ", Time.realtimeSinceStartup, lastInterval);
         lastInterval = Time.realtimeSinceStartup;
 
         totalVolume = computeObjectVolume();
@@ -746,6 +762,7 @@ public class GPUPBD : MonoBehaviour
     void Start()
     {
         setup();
+        startTime = Time.realtimeSinceStartup;
     }
     // Update is called once per frame
     void dispatchComputeShader()
@@ -785,7 +802,7 @@ public class GPUPBD : MonoBehaviour
         if (renderVolumeText)
         {
             computeShaderobj.Dispatch(computeObjVolumeKernel, (int)Mathf.Ceil(tetCount / 1024.0f), 1, 1);
-            //objVolumeBuffer.GetData(volumeDataGPU);
+            objVolumeBuffer.GetData(volumeDataGPU);
         }
         //compute normal for rendering
         computeShaderobj.Dispatch(computeVerticesNormal, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
@@ -800,22 +817,31 @@ public class GPUPBD : MonoBehaviour
     }
     void Update()
     {
-
+        double lastInterval = Time.realtimeSinceStartup;
         dispatchComputeShader();
         renderObject();
 
-        if (writeVolumeToFile)
-        {
-            buildDataPerRow(frame, volumeDataGPU[0]);
-            if (frame == maxFrameNum - 1)
-            {
-                //volume file name refer to prefix of the output file or method used
-                writeTableData(volumeFileName + "_" + modelName);
-                print("write Done");
-                UnityEditor.EditorApplication.isPlaying = false;
-            }
-        }
+        // if (writeVolumeToFile)
+        // {
+        //     buildDataPerRow(frame, volumeDataGPU[0]);
+        //     if (frame == maxFrameNum - 1)
+        //     {
+        //         //volume file name refer to prefix of the output file or method used
+        //         writeTableData(volumeFileName + "_" + modelName);
+        //         print("write Done");
+        //         UnityEditor.EditorApplication.isPlaying = false;
+        //     }
+        // }
         frame++;
+
+        if(frame == 2001){
+            double elapsed = Time.realtimeSinceStartup - startTime;            
+            elapsed /= 2000.0;
+            fps = 1000.0 / (elapsed * 1000.0);
+            Debug.Log("average elapsed time per frame = " + elapsed);
+            Debug.Log("fps = " + fps);
+            drawFPS = true;
+        }
     }
     void buildDataPerRow(int frame_num, float currVolume)
     {
@@ -881,12 +907,13 @@ public class GPUPBD : MonoBehaviour
             GUI.Label(rect, text, style);
         }
 
-        if (true)
-        {
-            float fps = 1.0f / Time.deltaTime;
-            float ms = Time.deltaTime * 1000.0f;
-            string text = string.Format("{0:N1} FPS ({1:N1}ms)", fps, ms);
+        if (drawFPS)
+        {            
+            // float _fps = 1.0f / Time.deltaTime;
+            // float ms = Time.deltaTime * 1000.0f;
 
+            //string text = string.Format("{0:N1} FPS ({1:N1}ms)", fps, ms);
+            string text = string.Format("{0:N1} FPS", fps);
             int w = Screen.width, h = Screen.height;
             GUIStyle style = new GUIStyle();
             rectPos = new Rect(0 + xOffset, yOffset, w, h * 2 / 100);
@@ -895,6 +922,20 @@ public class GPUPBD : MonoBehaviour
             style.normal.textColor = color;
 
             GUI.Label(rect, text, style);
+        }
+
+        if(true)
+        {
+            string dp = Application.dataPath;
+
+            int w = Screen.width, h = Screen.height;
+            GUIStyle style = new GUIStyle();
+            rectPos = new Rect(0 + xOffset, yOffset+100, w, h * 2 / 100);
+            Rect rect = rectPos;
+            style.fontSize = 50;
+            style.normal.textColor = color;
+
+            GUI.Label(rect, dp, style);
         }
     }
     private void OnDestroy()

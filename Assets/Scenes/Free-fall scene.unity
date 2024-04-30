@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.44657898, g: 0.4964133, b: 0.5748178, a: 1}
+  m_IndirectSpecularColor: {r: 0.44657856, g: 0.49641365, b: 0.5748185, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -507,8 +507,8 @@ Camera:
   m_GameObject: {fileID: 473582980}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 1
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_ClearFlags: 2
+  m_BackGroundColor: {r: 0.2264151, g: 0.2264151, b: 0.2264151, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -523,7 +523,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 80
+  field of view: 40
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -548,13 +548,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 473582980}
-  m_LocalRotation: {x: 0.32345074, y: 0.18280876, z: -0.063839674, w: 0.92622083}
-  m_LocalPosition: {x: -13.4, y: 31, z: -23.9}
+  m_LocalRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
+  m_LocalPosition: {x: 0, y: 57.2, z: -67.84}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 38.5, y: 22.33, z: 0}
+  m_LocalEulerAnglesHint: {x: 30, y: 0, z: 0}
 --- !u!1 &788422558
 GameObject:
   m_ObjectHideFlags: 0
@@ -573,7 +573,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!65 &788422559
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -774,7 +774,7 @@ Light:
   m_Type: 1
   m_Shape: 0
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 1.1
+  m_Intensity: 1
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -831,13 +831,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1122553060}
-  m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
+  m_LocalRotation: {x: 0.41035745, y: -0.2167223, z: 0.10105926, w: 0.8800144}
   m_LocalPosition: {x: 0, y: 3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 1
-  m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+  m_LocalEulerAnglesHint: {x: 50, y: -27.67, z: 0}
 --- !u!1 &1269394635
 GameObject:
   m_ObjectHideFlags: 0
@@ -943,6 +943,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1468730767}
   - component: {fileID: 1468730766}
+  - component: {fileID: 1468730768}
   m_Layer: 0
   m_Name: 'GPU-PBD '
   m_TagString: Untagged
@@ -962,17 +963,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2f34aec4ad4f99e41b05deaa669bcf36, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  model: 1
+  model: 2
   numberOfObjects: 20
-  invMass: 1
-  dt: 0.005
-  gravity: {x: 0, y: -9.81, z: 0}
+  invMass: 0.5
+  dt: 0.001
+  gravity: {x: 0, y: -9.8, z: 0}
   iteration: 20
-  convergence_factor: 1.5
+  convergence_factor: 1
   stretchStiffness: 1
   compressStiffness: 1
   bendingStiffness: 1
-  volumeStiffness: 30
+  volumeStiffness: 1
   floor: {fileID: 788422558}
   calculateCollision: 1
   printLog: 0
@@ -982,16 +983,16 @@ MonoBehaviour:
   xOffset: 0
   yOffset: 0
   fontSize: 0
-  textColor: {r: 1, g: 1, b: 1, a: 1}
+  textColor: {r: 0, g: 0, b: 0, a: 1}
   writeVolumeToFile: 0
   writeImageFrame: 0
-  maxFrameNum: 0
-  directory: E:/Labdata/Unity/PBDDeformation/20221206/
+  maxFrameNum: 4601
+  directory: D:\[00]. Research\[00]. Paper\[05]. [IEEE Access]\
   volumeFileName: dc
   computeShader: {fileID: 7200000, guid: eb99dc8c6d6189648b8a58276c38cb11, type: 3}
   collisionComputeShader: {fileID: 7200000, guid: 4c85d1d1c5a8a4a4198e062f95ad43a9, type: 3}
   renderingShader: {fileID: 4800000, guid: 9809208f6842d40429b8af687d2ec658, type: 3}
-  matColor: {r: 1, g: 0.4297467, b: 0, a: 0}
+  matColor: {r: 0, g: 1, b: 1, a: 0}
 --- !u!4 &1468730767
 Transform:
   m_ObjectHideFlags: 0
@@ -999,13 +1000,28 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1468730765}
-  m_LocalRotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 3, y: 15, z: 0}
-  m_LocalScale: {x: 8, y: 8, z: 8}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 5, y: 25, z: 0}
+  m_LocalScale: {x: 2, y: 2, z: 2}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 3
-  m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1468730768
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1468730765}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0da1a5e596fe2c4fa66c23433483ee0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  writeImage: 0
+  maxFrame: 10001
+  imgPath: D:\[00]. Research\[00]. Paper\[05]. [IEEE Access]\armadillo_10\
 --- !u!1 &1740453919
 GameObject:
   m_ObjectHideFlags: 0
@@ -1024,7 +1040,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!65 &1740453920
 BoxCollider:
   m_ObjectHideFlags: 0

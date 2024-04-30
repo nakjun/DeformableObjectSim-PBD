@@ -32,7 +32,7 @@ struct DistanceConstraint
 {
     int i1;
     int i2;
-    float restLength;
+    float restLength;    
 };
 
 struct Triangle
@@ -159,6 +159,15 @@ void satisfyDistanceConstraintKernel(uint3 i : SV_DispatchThreadID)
 
     float3 n = pi - pj;
     float L = length(n);
+
+    if(L < (restLength*0.8))
+    {
+        L = restLength*0.8;
+    }
+    if(L > (restLength*1.25))
+    {
+        L = restLength*1.25;
+    }
 
     n = normalize(n);
     /*if (L >= 1e-7) {
