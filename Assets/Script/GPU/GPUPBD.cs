@@ -336,7 +336,7 @@ public class GPUPBD : MonoBehaviour
             for (int j = 0; j < LoadTetModel.triangles.Count; j++)
             {
                 var t = _triangles[j];
-                triangles[j + TriOffset] = new Triangle(t.vertices[0] + PosOffset, t.vertices[1] + PosOffset, t.vertices[2] + PosOffset);                
+                triangles[j + TriOffset] = new Triangle(t.vertices[0] + PosOffset, t.vertices[1] + PosOffset, t.vertices[2] + PosOffset);
             }
             int TriArrOffset = i * LoadTetModel.triangleArr.Count;
             for (int j = 0; j < LoadTetModel.triangleArr.Count; j++)
@@ -632,7 +632,7 @@ public class GPUPBD : MonoBehaviour
         collisionComputeShader.SetFloat("convergence_factor", convergence_factor);
         Debug.Log("triCount per each Object : " + triCount / numberOfObjects);
         Debug.Log("nodeCount per each Object : " + nodeCount / numberOfObjects);
-        Debug.Log("tetraCount per each Object : " + tetCount / numberOfObjects);        
+        Debug.Log("tetraCount per each Object : " + tetCount / numberOfObjects);
         // bind buffer data to each kernel
 
         //Kernel #1 add force & apply euler
@@ -723,7 +723,7 @@ public class GPUPBD : MonoBehaviour
 
     void printDeltaTimeLog(string logtitle, double t1, double t2)
     {
-        if(print_delta_log)
+        if (print_delta_log)
         {
             Debug.Log(logtitle + (t1 - t2));
         }
@@ -736,7 +736,7 @@ public class GPUPBD : MonoBehaviour
         computeShaderobj = Instantiate(computeShader); // to instantiate the compute shader to be use with multiple object
         double lastInterval = Time.realtimeSinceStartup;
         SelectModelName();
-        printDeltaTimeLog("SelectModelName: ", Time.realtimeSinceStartup, lastInterval);        
+        printDeltaTimeLog("SelectModelName: ", Time.realtimeSinceStartup, lastInterval);
         lastInterval = Time.realtimeSinceStartup;
         setupMeshData(numberOfObjects);
         printDeltaTimeLog("setupMeshData: ", Time.realtimeSinceStartup, lastInterval);
@@ -771,15 +771,16 @@ public class GPUPBD : MonoBehaviour
         ////PBD algorithm
 
         ////damp velocity() here
-        if(calculateCollision){
+        if (calculateCollision)
+        {
             collisionComputeShader.Dispatch(computeCollisionHandling, (int)Mathf.Ceil(triCount / 32.0f), (int)Mathf.Ceil(triCount / 32.0f), 1);
             if (printLog)
             {
-                directionIntBuffer.GetData(directionDataGPU);                
+                directionIntBuffer.GetData(directionDataGPU);
                 for (int j = 0; j < directionDataGPU.Length; j++)
                 {
                     if (directionDataGPU[j].deltaXInt == 0 && directionDataGPU[j].deltaYInt == 0 && directionDataGPU[j].deltaZInt == 0) { continue; }
-                    Debug.Log("direction "+j+"=" + directionDataGPU[j].deltaXInt + "," + directionDataGPU[j].deltaYInt + "," + directionDataGPU[j].deltaZInt);                    
+                    Debug.Log("direction " + j + "=" + directionDataGPU[j].deltaXInt + "," + directionDataGPU[j].deltaYInt + "," + directionDataGPU[j].deltaZInt);
                 }
             }
             collisionComputeShader.Dispatch(computeCollisionResponse, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
@@ -792,7 +793,7 @@ public class GPUPBD : MonoBehaviour
             computeShaderobj.Dispatch(satisfyBendingConstraintKernel, (int)Mathf.Ceil(bendingCount / 1024.0f), 1, 1);
             computeShaderobj.Dispatch(satisfyTetVolConstraintKernel, (int)Mathf.Ceil(tetCount / 1024.0f), 1, 1);
             computeShaderobj.Dispatch(averageConstraintDeltasKernel, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
-            
+
         }
         computeShaderobj.Dispatch(floorCollisionKernel, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
         computeShaderobj.Dispatch(updatePositionsKernel, (int)Mathf.Ceil(nodeCount / 1024.0f), 1, 1);
@@ -834,8 +835,9 @@ public class GPUPBD : MonoBehaviour
         // }
         frame++;
 
-        if(frame == 2001){
-            double elapsed = Time.realtimeSinceStartup - startTime;            
+        if (frame == 2001)
+        {
+            double elapsed = Time.realtimeSinceStartup - startTime;
             elapsed /= 2000.0;
             fps = 1000.0 / (elapsed * 1000.0);
             Debug.Log("average elapsed time per frame = " + elapsed);
@@ -908,7 +910,7 @@ public class GPUPBD : MonoBehaviour
         }
 
         if (drawFPS)
-        {            
+        {
             // float _fps = 1.0f / Time.deltaTime;
             // float ms = Time.deltaTime * 1000.0f;
 
@@ -924,13 +926,13 @@ public class GPUPBD : MonoBehaviour
             GUI.Label(rect, text, style);
         }
 
-        if(true)
+        if (false)
         {
             string dp = Application.dataPath;
 
             int w = Screen.width, h = Screen.height;
             GUIStyle style = new GUIStyle();
-            rectPos = new Rect(0 + xOffset, yOffset+100, w, h * 2 / 100);
+            rectPos = new Rect(0 + xOffset, yOffset + 100, w, h * 2 / 100);
             Rect rect = rectPos;
             style.fontSize = 50;
             style.normal.textColor = color;
